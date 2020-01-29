@@ -8,11 +8,9 @@
 #include <stddef.h>
 
 /** 测速码盘最大记录数 */
-#define COUNTER_MAX_RECORD  4
+#define COUNTER_MAX_RECORD  5
 /** 测速时间窗口，单位毫秒，只使用这个时间内的计数计算速度 */
-#define COUNTER_SPEED_WINDOW    100
-/** 理论最大速度 */
-#define COUNTER_MAX_SPEED   1000
+#define COUNTER_STATE_WINDOW    100
 
 
 /**
@@ -53,10 +51,17 @@ static __INLINE uint32_t counter_read(const volatile Counter *counter)
 }
 
 /**
- * 根据计数记录计算实时转速.
+ * 根据计数记录计算码盘实时计数、转速及加速度.
  * 
- * 计算测速时间窗口内的平均速度，单位0.1格/秒.
+ * 使用二次曲线拟合测速时间窗口内的记录，再根据拟合的参数计算速度和加速度。
+ * 返回速度单位为格/秒，加速度单位为0.001格/秒。
  */
-extern uint32_t counter_get_speed(const volatile Counter *counter);
+extern int counter_get_state(
+    const volatile Counter *counter,
+    uint32_t *time,
+    uint32_t *count,
+    int32_t *speed,
+    int32_t *acc
+);
 
 #endif  /* _MISC_H */
