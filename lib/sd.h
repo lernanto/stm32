@@ -30,6 +30,12 @@
 #define SD_OUT_OF_RANGE     0x80U
 #define SD_CSD_OVERWRITE    0x80U
 
+/* 数据传输应答错误码 */
+#define SD_DATA_RESPONSE_MASK   0x1FU   /**< 有效数据为低5位 */
+#define SD_DATA_ACCEPTED    0x05U   /**< 数据传输成功 */
+#define SD_DATA_CRC_ERROR   0x0BU   /**< CRC 校验错误 */
+#define SD_DATA_WRITE_ERROR 0x0DU   /**< 写入错误 */
+
 #define SD_BLOCK_LEN    512     /**< 默认块长度，单位字节 */
 
 /**
@@ -41,6 +47,9 @@ typedef struct
     GPIO_TypeDef *cs_port;      /**< SPI CS 使能端口 */
     uint16_t cs_pin;            /**< SPI CS 引脚 */
     uint32_t timeout;           /**< SPI 超时时间 */
+    /** 用于保存上次和 SD 卡通信 SD 卡返回的状态码
+     * 在 SPI 通信错误的情况下，是 0x80000000 | SPI 错误码 */
+    uint32_t status;
 } SdControl;
 
 /**
@@ -53,6 +62,14 @@ extern int sd_spi_init(
     uint16_t cs_pin,
     uint32_t timeout
 );
+
+/**
+ * 获取最近一次通信 SD 卡返回的状态码.
+ */
+__STATIC_INLINE uint32_t sd_error(SdControl *sd)
+{
+    return sd->status;
+}
 
 /**
  * SD 卡上电后需要初始化才能开始通信.
