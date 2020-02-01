@@ -46,7 +46,7 @@ typedef struct
 /**
  * 初始化 SD 卡.
  */
-extern int sd_init(
+extern int sd_spi_init(
     SdControl *sd,
     SPI_HandleTypeDef *spi,
     GPIO_TypeDef *cs_port,
@@ -55,32 +55,52 @@ extern int sd_init(
 );
 
 /**
- * 重置 SD 卡为 SPI 模式.
+ * SD 卡上电后需要初始化才能开始通信.
  * 
  * @return  成功返回0，失败返回错误码
- *              - SPI 通信错误的情况下，返回的错误码是 HAL_StatusTypeDef 的错误码值
- *              - SD 卡错误的情况下，返回的错误码是 0x80000000 | SD 卡状态码
+ *              - SPI 通信错误的情况下，返回的错误码是 0x80000000 | HAL_StatusTypeDef 的错误码值
+ *              - SD 卡错误的情况下，返回的错误码是 SD 卡状态码
+ */
+extern uint32_t sd_power_on(SdControl *sd);
+
+/**
+ * 重置 SD 卡为 IDLE 状态.
+ * 
+ * @return  返回 SD 状态或错误码
+ *              - 成功返回 SD 卡状态码，为0x01
+ *              - SPI 通信错误的情况下，返回的错误码是 0x80000000 | HAL_StatusTypeDef 的错误码值
+ *              - SD 卡错误的情况下，返回的错误码是 SD 卡状态码
  */
 extern uint32_t sd_reset(SdControl *sd);
 
 /**
- * 从 SD 卡读取1块数据.
+ * 初始化 SD 卡为 SPI 模式.
  */
-extern uint32_t sd_read(SdControl *sd, uint32_t addr, uint8_t *buf);
+extern uint32_t sd_init(SdControl *sd);
+
+/**
+ * 获取 SD 卡状态.
+ */
+extern uint32_t sd_status(SdControl *sd);
+
+/**
+ * 从 SD 卡读取单块数据.
+ */
+extern uint32_t sd_read(SdControl *sd, uint32_t addr, uint8_t *data);
 
 /**
  * 从 SD 卡读取连续多块数据.
  */
-extern uint32_t sd_readmb(SdControl *sd, uint32_t addr, size_t num, uint8_t *buf);
+extern size_t sd_readmb(SdControl *sd, uint32_t addr, size_t num, uint8_t *data);
 
 /**
- * 向 SD 卡写入1块数据.
+ * 向 SD 卡写入单块数据.
  */
-extern uint32_t sd_write(SdControl *sd, uint32_t addr, const uint8_t *buf);
+extern uint32_t sd_write(SdControl *sd, uint32_t addr, uint8_t *data);
 
 /**
  * 向 SD 卡连续多块写入数据.
  */
-extern uint32_t sd_writemb(SdControl *sd, uint32_t addr, size_t num, const uint8_t *buf);
+extern size_t sd_writemb(SdControl *sd, uint32_t addr, size_t num, uint8_t *data);
 
 #endif  /* _SD_H */
