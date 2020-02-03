@@ -219,21 +219,48 @@ __STATIC_INLINE HAL_StatusTypeDef sd_cmd_r2(SdControl *sd, uint8_t *cmd)
  */
 __STATIC_INLINE HAL_StatusTypeDef sd_recv_data(SdControl *sd, uint8_t *data)
 {
+    static uint8_t dummy = 0xFFU;
     uint8_t buf[2];
-    HAL_StatusTypeDef status = sd_recv(sd, buf);
-    if (HAL_OK == status)
-    {
-        if (buf[0] != SD_START_BLOCK)
-        {
-            /* 接收到数据错误 */
-            sd->status = buf[0];
-            return status;
-        }
+    HAL_StatusTypeDef status;
+    uint32_t startms = HAL_GetTick();
+    uint32_t endms;
 
-        status = HAL_SPI_Receive(sd->spi, data, SD_BLOCK_LEN, sd->timeout);
-        /* 接收 CRC 校验数据 */
-        HAL_SPI_Receive(sd->spi, buf, 2, sd->timeout);
+    /* 等待数据块 */
+    do
+    {
+        if ((sd_wait_spi(sd)) == HAL_SPI_STATE_READY)
+        {
+            status = HAL_SPI_TransmitReceive(sd->spi, &dummy, buf, 1, sd->timeout);
+            endms = HAL_GetTick();
+        }
+        else
+        {
+            status = HAL_BUSY;
+        }
+    } while ((HAL_OK == status) && (0xFFU == buf[0])
+        && (endms <= startms + sd->timeout));
+
+    if (status != HAL_OK)
+    {
+        sd->status = (0x80000000U | status);
+        return status;
     }
+    if (0xFFU == buf[0])
+    {
+        sd->status = (0x80000000U | SD_TIMEOUT);
+        return SD_TIMEOUT;
+    }
+    if (buf[0] != SD_START_BLOCK)
+    {
+        /* 接收到错误响应 */
+        sd->status = buf[0];
+        return status;
+    }
+
+    /* 接收正式数据 */
+    status = HAL_SPI_Receive(sd->spi, data, SD_BLOCK_LEN, sd->timeout);
+    /* 接收 CRC 校验数据 */
+    HAL_SPI_Receive(sd->spi, buf, 2, sd->timeout);
 
     if (status != HAL_OK)
     {
@@ -244,6 +271,9 @@ __STATIC_INLINE HAL_StatusTypeDef sd_recv_data(SdControl *sd, uint8_t *data)
 
 /**
  * 等待 SD 卡 BUSY 信号结束.
+ *
+ * @note SD 卡在 BUSY 状态下输出低电平，BUSY 结束后输出高电平。
+ * 但由于 CS 选择 SD 卡后输出有1个时钟的延迟，应该检测 0xFF 而不是 0x00 来确定 SD 已就绪。
  */
 __STATIC_INLINE HAL_StatusTypeDef sd_wait_busy(SdControl *sd)
 {
@@ -262,10 +292,10 @@ __STATIC_INLINE HAL_StatusTypeDef sd_wait_busy(SdControl *sd)
             ++i;
         } while ((status != HAL_OK) && (i < SD_SPI_RETRY));
         endms = HAL_GetTick();
-    } while ((HAL_OK == status) && (0 == buf)
+    } while ((HAL_OK == status) && (buf != 0xFFU)
         && (endms <= startms + sd->timeout));
 
-    return (endms > sd->timeout) ? SD_TIMEOUT : status;
+    return (HAL_OK == status) ? ((0xFFU == buf) ? HAL_OK : SD_TIMEOUT) : status;
 }
 
 int sd_spi_init(
@@ -337,6 +367,31 @@ uint32_t sd_reset(SdControl *sd)
     return sd_error(sd);
 }
 
+uint32_t sd_status(SdControl *sd)
+{
+    HAL_StatusTypeDef status = HAL_OK;
+    uint8_t cmd[6];
+
+    sd_enable(sd);
+
+    /* SD 卡可能处在 BUSY 状态，等待 SD 卡就绪 */
+    if ((status = sd_wait_busy(sd)) != HAL_OK)
+    {
+        sd_disable(sd);
+        sd->status = (0x80000000U | status);
+        return sd->status;
+    }
+
+    memset(cmd, 0, ARRAYSIZE(cmd));
+    cmd[0] = SD_SEND_STATUS;
+    cmd[5] = 0x01U;
+    sd_cmd_r2(sd, cmd);
+
+    sd_disable(sd);
+    sd_send(sd, 0xFFU);
+    return sd->status;
+}
+
 uint32_t sd_init(SdControl *sd)
 {
     uint8_t cmd[SD_CMD_LEN];
@@ -344,7 +399,9 @@ uint32_t sd_init(SdControl *sd)
 
     sd_power_on(sd);
 
-    if (sd_reset(sd) != SD_IN_IDLE_STATE)
+    /*  检查 SD 是否处在 IDLE 状态，如果不是，尝试重置 SD 卡 */
+    if ((sd_status(sd) != SD_IN_IDLE_STATE)
+        && (sd_reset(sd) != SD_IN_IDLE_STATE))
     {
         return sd_error(sd);
     }
@@ -364,31 +421,6 @@ uint32_t sd_init(SdControl *sd)
     sd_send(sd, 0xFFU);
 
     return sd_error(sd);
-}
-
-uint32_t sd_status(SdControl *sd)
-{
-    HAL_StatusTypeDef status = HAL_OK;
-    uint8_t cmd[6];
-
-    sd_enable(sd);
-
-    /* SD 卡可能处在 BUSY 状态，等待 SD 卡就绪 */
-    if ((status = sd_wait_busy(sd)) == HAL_OK)
-    {
-        memset(cmd, 0, ARRAYSIZE(cmd));
-        cmd[0] = SD_SEND_STATUS;
-        cmd[5] = 0x01U;
-
-        sd_cmd_r2(sd, cmd);
-    }
-    else
-    {
-        sd->status = (0x80000000U | status);
-    }
-
-    sd_disable(sd);
-    return sd->status;
 }
 
 uint32_t sd_read(SdControl *sd, uint32_t addr, uint8_t *data)
@@ -537,6 +569,7 @@ size_t sd_writemb(SdControl *sd, uint32_t addr, size_t num, uint8_t *data)
 {
     HAL_StatusTypeDef status = HAL_OK;
     uint8_t buf[6];
+    size_t i = 0;
 
     sd_enable(sd);
 
@@ -565,7 +598,7 @@ size_t sd_writemb(SdControl *sd, uint32_t addr, size_t num, uint8_t *data)
     }
 
     /* 每次发送一个数据块 */
-    do
+    for (i = 0; i < num; ++i, data += SD_BLOCK_LEN)
     {
         /* 延迟8个时钟 */
         sd_send(sd, 0xFFU);
@@ -586,11 +619,12 @@ size_t sd_writemb(SdControl *sd, uint32_t addr, size_t num, uint8_t *data)
             }
         }
 
-        --num;
-        data += SD_BLOCK_LEN;
-    } while ((HAL_OK == status)
-        && ((buf[0] & SD_DATA_RESP_MASK) == SD_DATA_ACCEPTED)
-        && (num > 0));
+        if ((status != HAL_OK)
+            || ((buf[0] & SD_DATA_RESP_MASK) != SD_DATA_ACCEPTED))
+        {
+            break;
+        }
+    }
 
     /* 最后发送一个停止传输令牌 */
     if (HAL_OK == status)
@@ -600,6 +634,9 @@ size_t sd_writemb(SdControl *sd, uint32_t addr, size_t num, uint8_t *data)
         status = HAL_SPI_Transmit(sd->spi, buf, 1, sd->timeout);
     }
 
+    return i;
+
+#if 0
     /* 等待 BUSY 信号结束 */
     if ((status = sd_wait_busy(sd)) != HAL_OK)
     {
@@ -651,4 +688,5 @@ size_t sd_writemb(SdControl *sd, uint32_t addr, size_t num, uint8_t *data)
 
     sd_disable(sd);
     return num;
+#endif
 }
