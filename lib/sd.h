@@ -31,12 +31,17 @@
 #define SD_CSD_OVERWRITE    0x80U
 
 /* 数据传输应答错误码 */
-#define SD_DATA_RESPONSE_MASK   0x1FU   /**< 有效数据为低5位 */
+#define SD_DATA_RESP_MASK   0x1FU   /**< 有效数据为低5位 */
 #define SD_DATA_ACCEPTED    0x05U   /**< 数据传输成功 */
 #define SD_DATA_CRC_ERROR   0x0BU   /**< CRC 校验错误 */
 #define SD_DATA_WRITE_ERROR 0x0DU   /**< 写入错误 */
 
+/* 自定义错误码 */
+#define SD_EXCEED_MAX_RETRY 0x10U   /**< 超过最大重试次数 */
+#define SD_TIMEOUT          0x11U   /**< 等待 BUSY 超时 */
+
 #define SD_BLOCK_LEN    512     /**< 默认块长度，单位字节 */
+
 
 /**
  * SD 卡控制数据.
