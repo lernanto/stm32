@@ -87,18 +87,23 @@ extern uint32_t sd_power_on(SdControl *sd);
 
 /**
  * 重置 SD 卡为 IDLE 状态.
+ */
+extern uint32_t sd_reset(SdControl *sd);
+
+/**
+ * 初始化 SD 卡为 SPI 模式.
  * 
  * @return  返回 SD 状态或错误码
  *              - 成功返回 SD 卡状态码，为0x01
  *              - SPI 通信错误的情况下，返回的错误码是 0x80000000 | HAL_StatusTypeDef 的错误码值
  *              - SD 卡错误的情况下，返回的错误码是 SD 卡状态码
  */
-extern uint32_t sd_reset(SdControl *sd);
+extern uint32_t sd_init(SdControl *sd);
 
 /**
- * 初始化 SD 卡为 SPI 模式.
+ * 重新初始化 SD 卡.
  */
-extern uint32_t sd_init(SdControl *sd);
+extern uint32_t sd_reinit(SdControl *sd);
 
 /**
  * 获取 SD 卡状态.
@@ -118,11 +123,31 @@ extern size_t sd_readmb(SdControl *sd, uint32_t addr, size_t num, uint8_t *data)
 /**
  * 向 SD 卡写入单块数据.
  */
-extern uint32_t sd_write(SdControl *sd, uint32_t addr, uint8_t *data);
+extern uint32_t sd_write(SdControl *sd, uint32_t addr, const uint8_t *data);
 
 /**
  * 向 SD 卡连续多块写入数据.
  */
-extern size_t sd_writemb(SdControl *sd, uint32_t addr, size_t num, uint8_t *data);
+extern size_t sd_writemb(SdControl *sd, uint32_t addr, size_t num, const uint8_t *data);
+
+/**
+ * 获取上次成功写入的块数.
+ */
+extern size_t sd_get_write_num(SdControl *sd);
+
+/**
+ * 读取 OCR 寄存器的值.
+ */
+extern uint32_t sd_ocr(SdControl *sd);
+
+/**
+ * 获取 SD 卡容量块数，以512字节为1块.
+ */
+extern size_t sd_block_num(SdControl *sd);
+
+/**
+ * 同步 SD 卡，等待上一次写操作完成.
+ */
+extern uint32_t sd_sync(SdControl *sd);
 
 #endif  /* _SD_H */
