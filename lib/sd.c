@@ -70,8 +70,13 @@ __STATIC_INLINE void sd_enable(SdControl *sd)
  */
 __STATIC_INLINE void sd_disable(SdControl *sd)
 {
+    static const uint8_t dummy[] = { 0xFFU, 0xFFU, 0xFFU, 0xFFU };
+
     HAL_GPIO_WritePin(sd->cs_port, sd->cs_pin, GPIO_PIN_SET);
     delayus(10);
+
+    /* 多发送几个时钟使 SD 卡稳定 */
+    HAL_SPI_Transmit(sd->spi, (uint8_t *)dummy, ARRAYSIZE(dummy), sd->timeout);
 }
 
 /**
@@ -325,7 +330,7 @@ uint32_t sd_power_on(SdControl *sd)
     sd_disable(sd);
 
     /* SD 卡上电后要持续发送高电平至少74个时钟周期 */
-    for (size_t i = 0; i < 74; ++i)
+    for (size_t i = 0; i < 10; ++i)
     {
         sd_send(sd, 0xFFU);
     }
@@ -398,19 +403,24 @@ uint32_t sd_init(SdControl *sd)
 {
     sd_power_on(sd);
 
-    /* SD 卡上电后处于 IDLE 状态 */
-    return sd_poll(sd);
+    /* 重新初始化也可能调用此函数，保险起见手动重置 SD 卡 */
+    if (sd_reset(sd) == SD_IN_IDLE_STATE)
+    {
+        sd_poll(sd);
+    }
+
+    return sd_error(sd);
 }
 
 uint32_t sd_reinit(SdControl *sd)
 {
     /* 重置 SD 卡使进入 IDLE 状态 */
-    if (sd_reset(sd) != SD_IN_IDLE_STATE)
+    if (sd_reset(sd) == SD_IN_IDLE_STATE)
     {
-        return sd_error(sd);
+        sd_poll(sd);
     }
 
-    return sd_poll(sd);
+    return sd_error(sd);
 }
 
 uint32_t sd_ocr(SdControl *sd)
