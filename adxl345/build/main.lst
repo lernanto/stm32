@@ -1,0 +1,636 @@
+ARM GAS  /tmp/ccnpP3C0.s 			page 1
+
+
+   1              		.cpu cortex-m3
+   2              		.eabi_attribute 20, 1
+   3              		.eabi_attribute 21, 1
+   4              		.eabi_attribute 23, 3
+   5              		.eabi_attribute 24, 1
+   6              		.eabi_attribute 25, 1
+   7              		.eabi_attribute 26, 1
+   8              		.eabi_attribute 30, 1
+   9              		.eabi_attribute 34, 1
+  10              		.eabi_attribute 18, 4
+  11              		.file	"main.c"
+  12              		.text
+  13              	.Ltext0:
+  14              		.cfi_sections	.debug_frame
+  15              		.section	.text.SystemClock_Config,"ax",%progbits
+  16              		.align	1
+  17              		.global	SystemClock_Config
+  18              		.syntax unified
+  19              		.thumb
+  20              		.thumb_func
+  21              		.fpu softvfp
+  23              	SystemClock_Config:
+  24              	.LFB67:
+  25              		.file 1 "Src/main.c"
+   1:Src/main.c    **** /* USER CODE BEGIN Header */
+   2:Src/main.c    **** /**
+   3:Src/main.c    ****   ******************************************************************************
+   4:Src/main.c    ****   * @file           : main.c
+   5:Src/main.c    ****   * @brief          : Main program body
+   6:Src/main.c    ****   ******************************************************************************
+   7:Src/main.c    ****   * @attention
+   8:Src/main.c    ****   *
+   9:Src/main.c    ****   * <h2><center>&copy; Copyright (c) 2020 STMicroelectronics.
+  10:Src/main.c    ****   * All rights reserved.</center></h2>
+  11:Src/main.c    ****   *
+  12:Src/main.c    ****   * This software component is licensed by ST under Ultimate Liberty license
+  13:Src/main.c    ****   * SLA0044, the "License"; You may not use this file except in compliance with
+  14:Src/main.c    ****   * the License. You may obtain a copy of the License at:
+  15:Src/main.c    ****   *                             www.st.com/SLA0044
+  16:Src/main.c    ****   *
+  17:Src/main.c    ****   ******************************************************************************
+  18:Src/main.c    ****   */
+  19:Src/main.c    **** /* USER CODE END Header */
+  20:Src/main.c    **** 
+  21:Src/main.c    **** /* Includes ------------------------------------------------------------------*/
+  22:Src/main.c    **** #include "main.h"
+  23:Src/main.c    **** #include "adc.h"
+  24:Src/main.c    **** #include "dma.h"
+  25:Src/main.c    **** #include "i2c.h"
+  26:Src/main.c    **** #include "spi.h"
+  27:Src/main.c    **** #include "usb_device.h"
+  28:Src/main.c    **** #include "gpio.h"
+  29:Src/main.c    **** 
+  30:Src/main.c    **** /* Private includes ----------------------------------------------------------*/
+  31:Src/main.c    **** /* USER CODE BEGIN Includes */
+  32:Src/main.c    **** #include <string.h>
+  33:Src/main.c    **** 
+ARM GAS  /tmp/ccnpP3C0.s 			page 2
+
+
+  34:Src/main.c    **** #include "usbd_cdc_if.h"
+  35:Src/main.c    **** 
+  36:Src/main.c    **** #include "common.h"
+  37:Src/main.c    **** #include "adxl345.h"
+  38:Src/main.c    **** /* USER CODE END Includes */
+  39:Src/main.c    **** 
+  40:Src/main.c    **** /* Private typedef -----------------------------------------------------------*/
+  41:Src/main.c    **** /* USER CODE BEGIN PTD */
+  42:Src/main.c    **** 
+  43:Src/main.c    **** /* USER CODE END PTD */
+  44:Src/main.c    **** 
+  45:Src/main.c    **** /* Private define ------------------------------------------------------------*/
+  46:Src/main.c    **** /* USER CODE BEGIN PD */
+  47:Src/main.c    **** /* USER CODE END PD */
+  48:Src/main.c    **** 
+  49:Src/main.c    **** /* Private macro -------------------------------------------------------------*/
+  50:Src/main.c    **** /* USER CODE BEGIN PM */
+  51:Src/main.c    **** 
+  52:Src/main.c    **** /* USER CODE END PM */
+  53:Src/main.c    **** 
+  54:Src/main.c    **** /* Private variables ---------------------------------------------------------*/
+  55:Src/main.c    **** 
+  56:Src/main.c    **** /* USER CODE BEGIN PV */
+  57:Src/main.c    **** 
+  58:Src/main.c    **** /* USER CODE END PV */
+  59:Src/main.c    **** 
+  60:Src/main.c    **** /* Private function prototypes -----------------------------------------------*/
+  61:Src/main.c    **** void SystemClock_Config(void);
+  62:Src/main.c    **** /* USER CODE BEGIN PFP */
+  63:Src/main.c    **** 
+  64:Src/main.c    **** /* USER CODE END PFP */
+  65:Src/main.c    **** 
+  66:Src/main.c    **** /* Private user code ---------------------------------------------------------*/
+  67:Src/main.c    **** /* USER CODE BEGIN 0 */
+  68:Src/main.c    **** 
+  69:Src/main.c    **** /* USER CODE END 0 */
+  70:Src/main.c    **** 
+  71:Src/main.c    **** /**
+  72:Src/main.c    ****   * @brief  The application entry point.
+  73:Src/main.c    ****   * @retval int
+  74:Src/main.c    ****   */
+  75:Src/main.c    **** int main(void)
+  76:Src/main.c    **** {
+  77:Src/main.c    ****   /* USER CODE BEGIN 1 */
+  78:Src/main.c    ****   static char strbuf[256];
+  79:Src/main.c    ****   HAL_StatusTypeDef status = HAL_OK;
+  80:Src/main.c    ****   Adxl345I2cHandle hadxl345_i2c;
+  81:Src/main.c    ****   Adxl345Handle *hadxl345 = NULL;
+  82:Src/main.c    ****   int32_t x = 0;
+  83:Src/main.c    ****   int32_t y = 0;
+  84:Src/main.c    ****   int32_t z = 0;
+  85:Src/main.c    ****   /* USER CODE END 1 */
+  86:Src/main.c    ****   
+  87:Src/main.c    **** 
+  88:Src/main.c    ****   /* MCU Configuration--------------------------------------------------------*/
+  89:Src/main.c    **** 
+  90:Src/main.c    ****   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+ARM GAS  /tmp/ccnpP3C0.s 			page 3
+
+
+  91:Src/main.c    ****   HAL_Init();
+  92:Src/main.c    **** 
+  93:Src/main.c    ****   /* USER CODE BEGIN Init */
+  94:Src/main.c    **** 
+  95:Src/main.c    ****   /* USER CODE END Init */
+  96:Src/main.c    **** 
+  97:Src/main.c    ****   /* Configure the system clock */
+  98:Src/main.c    ****   SystemClock_Config();
+  99:Src/main.c    **** 
+ 100:Src/main.c    ****   /* USER CODE BEGIN SysInit */
+ 101:Src/main.c    ****   /* USER CODE END SysInit */
+ 102:Src/main.c    **** 
+ 103:Src/main.c    ****   /* Initialize all configured peripherals */
+ 104:Src/main.c    ****   MX_GPIO_Init();
+ 105:Src/main.c    ****   MX_DMA_Init();
+ 106:Src/main.c    ****   MX_ADC1_Init();
+ 107:Src/main.c    ****   MX_I2C1_Init();
+ 108:Src/main.c    ****   MX_SPI2_Init();
+ 109:Src/main.c    ****   MX_USB_DEVICE_Init();
+ 110:Src/main.c    ****   /* USER CODE BEGIN 2 */
+ 111:Src/main.c    ****   status = adxl345_i2c_init(&hadxl345_i2c, &hi2c1, ADXL345_ALT_ADDR, 10);
+ 112:Src/main.c    ****   hadxl345 = (Adxl345Handle *)&hadxl345_i2c;
+ 113:Src/main.c    ****   status = adxl345_init(hadxl345);
+ 114:Src/main.c    ****   if (status != HAL_OK)
+ 115:Src/main.c    ****   {
+ 116:Src/main.c    ****     snprintf(strbuf, ARRAYSIZE(strbuf), "init ADXL345 error %d\n", status);
+ 117:Src/main.c    ****     CDC_Transmit_FS((uint8_t*)strbuf, strlen(strbuf));
+ 118:Src/main.c    ****   }
+ 119:Src/main.c    ****   /* USER CODE END 2 */
+ 120:Src/main.c    **** 
+ 121:Src/main.c    ****   /* Infinite loop */
+ 122:Src/main.c    ****   /* USER CODE BEGIN WHILE */
+ 123:Src/main.c    ****   while (1)
+ 124:Src/main.c    ****   {
+ 125:Src/main.c    ****     /* USER CODE END WHILE */
+ 126:Src/main.c    **** 
+ 127:Src/main.c    ****     /* USER CODE BEGIN 3 */
+ 128:Src/main.c    ****     status = adxl345_get_acc(hadxl345, &x, &y, &z);
+ 129:Src/main.c    ****     if (HAL_OK == status)
+ 130:Src/main.c    ****     {
+ 131:Src/main.c    ****       snprintf(strbuf, ARRAYSIZE(strbuf), "x = %ld, y = %ld, z = %ld\n", x, y, z);
+ 132:Src/main.c    ****       status = CDC_Transmit_FS((uint8_t*)strbuf, strlen(strbuf));
+ 133:Src/main.c    ****     }
+ 134:Src/main.c    ****     else
+ 135:Src/main.c    ****     {
+ 136:Src/main.c    ****       snprintf(strbuf, ARRAYSIZE(strbuf), "ADXL345 error %d", status);
+ 137:Src/main.c    ****       CDC_Transmit_FS((uint8_t*)strbuf, strlen(strbuf));
+ 138:Src/main.c    ****     }
+ 139:Src/main.c    ****     
+ 140:Src/main.c    ****     HAL_Delay(10);
+ 141:Src/main.c    ****   }
+ 142:Src/main.c    ****   /* USER CODE END 3 */
+ 143:Src/main.c    **** }
+ 144:Src/main.c    **** 
+ 145:Src/main.c    **** /**
+ 146:Src/main.c    ****   * @brief System Clock Configuration
+ 147:Src/main.c    ****   * @retval None
+ARM GAS  /tmp/ccnpP3C0.s 			page 4
+
+
+ 148:Src/main.c    ****   */
+ 149:Src/main.c    **** void SystemClock_Config(void)
+ 150:Src/main.c    **** {
+  26              		.loc 1 150 0
+  27              		.cfi_startproc
+  28              		@ args = 0, pretend = 0, frame = 80
+  29              		@ frame_needed = 0, uses_anonymous_args = 0
+  30 0000 30B5     		push	{r4, r5, lr}
+  31              	.LCFI0:
+  32              		.cfi_def_cfa_offset 12
+  33              		.cfi_offset 4, -12
+  34              		.cfi_offset 5, -8
+  35              		.cfi_offset 14, -4
+  36 0002 95B0     		sub	sp, sp, #84
+  37              	.LCFI1:
+  38              		.cfi_def_cfa_offset 96
+ 151:Src/main.c    ****   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  39              		.loc 1 151 0
+  40 0004 2822     		movs	r2, #40
+  41 0006 0021     		movs	r1, #0
+  42 0008 0DEB0200 		add	r0, sp, r2
+  43 000c FFF7FEFF 		bl	memset
+  44              	.LVL0:
+ 152:Src/main.c    ****   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  45              		.loc 1 152 0
+  46 0010 0024     		movs	r4, #0
+  47 0012 0594     		str	r4, [sp, #20]
+  48 0014 0694     		str	r4, [sp, #24]
+  49 0016 0794     		str	r4, [sp, #28]
+  50 0018 0894     		str	r4, [sp, #32]
+  51 001a 0994     		str	r4, [sp, #36]
+ 153:Src/main.c    ****   RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
+  52              		.loc 1 153 0
+  53 001c 0194     		str	r4, [sp, #4]
+  54 001e 0294     		str	r4, [sp, #8]
+  55 0020 0394     		str	r4, [sp, #12]
+  56 0022 0494     		str	r4, [sp, #16]
+ 154:Src/main.c    **** 
+ 155:Src/main.c    ****   /** Initializes the CPU, AHB and APB busses clocks 
+ 156:Src/main.c    ****   */
+ 157:Src/main.c    ****   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  57              		.loc 1 157 0
+  58 0024 0122     		movs	r2, #1
+  59 0026 0A92     		str	r2, [sp, #40]
+ 158:Src/main.c    ****   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  60              		.loc 1 158 0
+  61 0028 4FF48033 		mov	r3, #65536
+  62 002c 0B93     		str	r3, [sp, #44]
+ 159:Src/main.c    ****   RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
+ 160:Src/main.c    ****   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  63              		.loc 1 160 0
+  64 002e 0E92     		str	r2, [sp, #56]
+ 161:Src/main.c    ****   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  65              		.loc 1 161 0
+  66 0030 0225     		movs	r5, #2
+  67 0032 1195     		str	r5, [sp, #68]
+ 162:Src/main.c    ****   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+ARM GAS  /tmp/ccnpP3C0.s 			page 5
+
+
+  68              		.loc 1 162 0
+  69 0034 1293     		str	r3, [sp, #72]
+ 163:Src/main.c    ****   RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
+  70              		.loc 1 163 0
+  71 0036 4FF4E013 		mov	r3, #1835008
+  72 003a 1393     		str	r3, [sp, #76]
+ 164:Src/main.c    ****   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  73              		.loc 1 164 0
+  74 003c 0AA8     		add	r0, sp, #40
+  75 003e FFF7FEFF 		bl	HAL_RCC_OscConfig
+  76              	.LVL1:
+ 165:Src/main.c    ****   {
+ 166:Src/main.c    ****     Error_Handler();
+ 167:Src/main.c    ****   }
+ 168:Src/main.c    ****   /** Initializes the CPU, AHB and APB busses clocks 
+ 169:Src/main.c    ****   */
+ 170:Src/main.c    ****   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+  77              		.loc 1 170 0
+  78 0042 0F23     		movs	r3, #15
+  79 0044 0593     		str	r3, [sp, #20]
+ 171:Src/main.c    ****                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+ 172:Src/main.c    ****   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  80              		.loc 1 172 0
+  81 0046 0695     		str	r5, [sp, #24]
+ 173:Src/main.c    ****   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  82              		.loc 1 173 0
+  83 0048 0794     		str	r4, [sp, #28]
+ 174:Src/main.c    ****   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+  84              		.loc 1 174 0
+  85 004a 4FF48063 		mov	r3, #1024
+  86 004e 0893     		str	r3, [sp, #32]
+ 175:Src/main.c    ****   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+  87              		.loc 1 175 0
+  88 0050 0994     		str	r4, [sp, #36]
+ 176:Src/main.c    **** 
+ 177:Src/main.c    ****   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  89              		.loc 1 177 0
+  90 0052 2946     		mov	r1, r5
+  91 0054 05A8     		add	r0, sp, #20
+  92 0056 FFF7FEFF 		bl	HAL_RCC_ClockConfig
+  93              	.LVL2:
+ 178:Src/main.c    ****   {
+ 179:Src/main.c    ****     Error_Handler();
+ 180:Src/main.c    ****   }
+ 181:Src/main.c    ****   PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC|RCC_PERIPHCLK_USB;
+  94              		.loc 1 181 0
+  95 005a 1223     		movs	r3, #18
+  96 005c 0193     		str	r3, [sp, #4]
+ 182:Src/main.c    ****   PeriphClkInit.AdcClockSelection = RCC_ADCPCLK2_DIV6;
+  97              		.loc 1 182 0
+  98 005e 4FF40043 		mov	r3, #32768
+  99 0062 0393     		str	r3, [sp, #12]
+ 183:Src/main.c    ****   PeriphClkInit.UsbClockSelection = RCC_USBCLKSOURCE_PLL_DIV1_5;
+ 100              		.loc 1 183 0
+ 101 0064 0494     		str	r4, [sp, #16]
+ 184:Src/main.c    ****   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+ 102              		.loc 1 184 0
+ARM GAS  /tmp/ccnpP3C0.s 			page 6
+
+
+ 103 0066 01A8     		add	r0, sp, #4
+ 104 0068 FFF7FEFF 		bl	HAL_RCCEx_PeriphCLKConfig
+ 105              	.LVL3:
+ 185:Src/main.c    ****   {
+ 186:Src/main.c    ****     Error_Handler();
+ 187:Src/main.c    ****   }
+ 188:Src/main.c    **** }
+ 106              		.loc 1 188 0
+ 107 006c 15B0     		add	sp, sp, #84
+ 108              	.LCFI2:
+ 109              		.cfi_def_cfa_offset 12
+ 110              		@ sp needed
+ 111 006e 30BD     		pop	{r4, r5, pc}
+ 112              		.cfi_endproc
+ 113              	.LFE67:
+ 115              		.section	.text.main,"ax",%progbits
+ 116              		.align	1
+ 117              		.global	main
+ 118              		.syntax unified
+ 119              		.thumb
+ 120              		.thumb_func
+ 121              		.fpu softvfp
+ 123              	main:
+ 124              	.LFB66:
+  76:Src/main.c    ****   /* USER CODE BEGIN 1 */
+ 125              		.loc 1 76 0
+ 126              		.cfi_startproc
+ 127              		@ args = 0, pretend = 0, frame = 40
+ 128              		@ frame_needed = 0, uses_anonymous_args = 0
+ 129 0000 10B5     		push	{r4, lr}
+ 130              	.LCFI3:
+ 131              		.cfi_def_cfa_offset 8
+ 132              		.cfi_offset 4, -8
+ 133              		.cfi_offset 14, -4
+ 134 0002 8CB0     		sub	sp, sp, #48
+ 135              	.LCFI4:
+ 136              		.cfi_def_cfa_offset 56
+ 137              	.LVL4:
+  82:Src/main.c    ****   int32_t y = 0;
+ 138              		.loc 1 82 0
+ 139 0004 0023     		movs	r3, #0
+ 140 0006 0493     		str	r3, [sp, #16]
+  83:Src/main.c    ****   int32_t z = 0;
+ 141              		.loc 1 83 0
+ 142 0008 0393     		str	r3, [sp, #12]
+  84:Src/main.c    ****   /* USER CODE END 1 */
+ 143              		.loc 1 84 0
+ 144 000a 0293     		str	r3, [sp, #8]
+  91:Src/main.c    **** 
+ 145              		.loc 1 91 0
+ 146 000c FFF7FEFF 		bl	HAL_Init
+ 147              	.LVL5:
+  98:Src/main.c    **** 
+ 148              		.loc 1 98 0
+ 149 0010 FFF7FEFF 		bl	SystemClock_Config
+ 150              	.LVL6:
+ 104:Src/main.c    ****   MX_DMA_Init();
+ARM GAS  /tmp/ccnpP3C0.s 			page 7
+
+
+ 151              		.loc 1 104 0
+ 152 0014 FFF7FEFF 		bl	MX_GPIO_Init
+ 153              	.LVL7:
+ 105:Src/main.c    ****   MX_ADC1_Init();
+ 154              		.loc 1 105 0
+ 155 0018 FFF7FEFF 		bl	MX_DMA_Init
+ 156              	.LVL8:
+ 106:Src/main.c    ****   MX_I2C1_Init();
+ 157              		.loc 1 106 0
+ 158 001c FFF7FEFF 		bl	MX_ADC1_Init
+ 159              	.LVL9:
+ 107:Src/main.c    ****   MX_SPI2_Init();
+ 160              		.loc 1 107 0
+ 161 0020 FFF7FEFF 		bl	MX_I2C1_Init
+ 162              	.LVL10:
+ 108:Src/main.c    ****   MX_USB_DEVICE_Init();
+ 163              		.loc 1 108 0
+ 164 0024 FFF7FEFF 		bl	MX_SPI2_Init
+ 165              	.LVL11:
+ 109:Src/main.c    ****   /* USER CODE BEGIN 2 */
+ 166              		.loc 1 109 0
+ 167 0028 FFF7FEFF 		bl	MX_USB_DEVICE_Init
+ 168              	.LVL12:
+ 111:Src/main.c    ****   hadxl345 = (Adxl345Handle *)&hadxl345_i2c;
+ 169              		.loc 1 111 0
+ 170 002c 0A23     		movs	r3, #10
+ 171 002e A622     		movs	r2, #166
+ 172 0030 2249     		ldr	r1, .L9
+ 173 0032 05A8     		add	r0, sp, #20
+ 174 0034 FFF7FEFF 		bl	adxl345_i2c_init
+ 175              	.LVL13:
+ 113:Src/main.c    ****   if (status != HAL_OK)
+ 176              		.loc 1 113 0
+ 177 0038 05A8     		add	r0, sp, #20
+ 178              	.LVL14:
+ 179 003a FFF7FEFF 		bl	adxl345_init
+ 180              	.LVL15:
+ 114:Src/main.c    ****   {
+ 181              		.loc 1 114 0
+ 182 003e 00B3     		cbz	r0, .L7
+ 183 0040 0346     		mov	r3, r0
+ 116:Src/main.c    ****     CDC_Transmit_FS((uint8_t*)strbuf, strlen(strbuf));
+ 184              		.loc 1 116 0
+ 185 0042 1F4C     		ldr	r4, .L9+4
+ 186 0044 1F4A     		ldr	r2, .L9+8
+ 187 0046 4FF48071 		mov	r1, #256
+ 188 004a 2046     		mov	r0, r4
+ 189              	.LVL16:
+ 190 004c FFF7FEFF 		bl	snprintf
+ 191              	.LVL17:
+ 117:Src/main.c    ****   }
+ 192              		.loc 1 117 0
+ 193 0050 2046     		mov	r0, r4
+ 194 0052 FFF7FEFF 		bl	strlen
+ 195              	.LVL18:
+ 196 0056 81B2     		uxth	r1, r0
+ 197 0058 2046     		mov	r0, r4
+ARM GAS  /tmp/ccnpP3C0.s 			page 8
+
+
+ 198 005a FFF7FEFF 		bl	CDC_Transmit_FS
+ 199              	.LVL19:
+ 200 005e 10E0     		b	.L7
+ 201              	.LVL20:
+ 202              	.L5:
+ 136:Src/main.c    ****       CDC_Transmit_FS((uint8_t*)strbuf, strlen(strbuf));
+ 203              		.loc 1 136 0
+ 204 0060 174C     		ldr	r4, .L9+4
+ 205 0062 194A     		ldr	r2, .L9+12
+ 206 0064 4FF48071 		mov	r1, #256
+ 207 0068 2046     		mov	r0, r4
+ 208              	.LVL21:
+ 209 006a FFF7FEFF 		bl	snprintf
+ 210              	.LVL22:
+ 137:Src/main.c    ****     }
+ 211              		.loc 1 137 0
+ 212 006e 2046     		mov	r0, r4
+ 213 0070 FFF7FEFF 		bl	strlen
+ 214              	.LVL23:
+ 215 0074 81B2     		uxth	r1, r0
+ 216 0076 2046     		mov	r0, r4
+ 217 0078 FFF7FEFF 		bl	CDC_Transmit_FS
+ 218              	.LVL24:
+ 219              	.L6:
+ 140:Src/main.c    ****   }
+ 220              		.loc 1 140 0
+ 221 007c 0A20     		movs	r0, #10
+ 222 007e FFF7FEFF 		bl	HAL_Delay
+ 223              	.LVL25:
+ 224              	.L7:
+ 128:Src/main.c    ****     if (HAL_OK == status)
+ 225              		.loc 1 128 0
+ 226 0082 02AB     		add	r3, sp, #8
+ 227 0084 03AA     		add	r2, sp, #12
+ 228 0086 04A9     		add	r1, sp, #16
+ 229 0088 05A8     		add	r0, sp, #20
+ 230              	.LVL26:
+ 231 008a FFF7FEFF 		bl	adxl345_get_acc
+ 232              	.LVL27:
+ 129:Src/main.c    ****     {
+ 233              		.loc 1 129 0
+ 234 008e 0346     		mov	r3, r0
+ 235 0090 0028     		cmp	r0, #0
+ 236 0092 E5D1     		bne	.L5
+ 131:Src/main.c    ****       status = CDC_Transmit_FS((uint8_t*)strbuf, strlen(strbuf));
+ 237              		.loc 1 131 0
+ 238 0094 0A4C     		ldr	r4, .L9+4
+ 239 0096 029B     		ldr	r3, [sp, #8]
+ 240 0098 0193     		str	r3, [sp, #4]
+ 241 009a 039B     		ldr	r3, [sp, #12]
+ 242 009c 0093     		str	r3, [sp]
+ 243 009e 049B     		ldr	r3, [sp, #16]
+ 244 00a0 0A4A     		ldr	r2, .L9+16
+ 245 00a2 4FF48071 		mov	r1, #256
+ 246 00a6 2046     		mov	r0, r4
+ 247              	.LVL28:
+ 248 00a8 FFF7FEFF 		bl	snprintf
+ARM GAS  /tmp/ccnpP3C0.s 			page 9
+
+
+ 249              	.LVL29:
+ 132:Src/main.c    ****     }
+ 250              		.loc 1 132 0
+ 251 00ac 2046     		mov	r0, r4
+ 252 00ae FFF7FEFF 		bl	strlen
+ 253              	.LVL30:
+ 254 00b2 81B2     		uxth	r1, r0
+ 255 00b4 2046     		mov	r0, r4
+ 256 00b6 FFF7FEFF 		bl	CDC_Transmit_FS
+ 257              	.LVL31:
+ 258 00ba DFE7     		b	.L6
+ 259              	.L10:
+ 260              		.align	2
+ 261              	.L9:
+ 262 00bc 00000000 		.word	hi2c1
+ 263 00c0 00000000 		.word	.LANCHOR0
+ 264 00c4 00000000 		.word	.LC0
+ 265 00c8 34000000 		.word	.LC2
+ 266 00cc 18000000 		.word	.LC1
+ 267              		.cfi_endproc
+ 268              	.LFE66:
+ 270              		.section	.text.Error_Handler,"ax",%progbits
+ 271              		.align	1
+ 272              		.global	Error_Handler
+ 273              		.syntax unified
+ 274              		.thumb
+ 275              		.thumb_func
+ 276              		.fpu softvfp
+ 278              	Error_Handler:
+ 279              	.LFB68:
+ 189:Src/main.c    **** 
+ 190:Src/main.c    **** /* USER CODE BEGIN 4 */
+ 191:Src/main.c    **** 
+ 192:Src/main.c    **** /* USER CODE END 4 */
+ 193:Src/main.c    **** 
+ 194:Src/main.c    **** /**
+ 195:Src/main.c    ****   * @brief  This function is executed in case of error occurrence.
+ 196:Src/main.c    ****   * @retval None
+ 197:Src/main.c    ****   */
+ 198:Src/main.c    **** void Error_Handler(void)
+ 199:Src/main.c    **** {
+ 280              		.loc 1 199 0
+ 281              		.cfi_startproc
+ 282              		@ args = 0, pretend = 0, frame = 0
+ 283              		@ frame_needed = 0, uses_anonymous_args = 0
+ 284              		@ link register save eliminated.
+ 285 0000 7047     		bx	lr
+ 286              		.cfi_endproc
+ 287              	.LFE68:
+ 289              		.section	.bss.strbuf.8113,"aw",%nobits
+ 290              		.align	2
+ 291              		.set	.LANCHOR0,. + 0
+ 294              	strbuf.8113:
+ 295 0000 00000000 		.space	256
+ 295      00000000 
+ 295      00000000 
+ 295      00000000 
+ARM GAS  /tmp/ccnpP3C0.s 			page 10
+
+
+ 295      00000000 
+ 296              		.section	.rodata.main.str1.4,"aMS",%progbits,1
+ 297              		.align	2
+ 298              	.LC0:
+ 299 0000 696E6974 		.ascii	"init ADXL345 error %d\012\000"
+ 299      20414458 
+ 299      4C333435 
+ 299      20657272 
+ 299      6F722025 
+ 300 0017 00       		.space	1
+ 301              	.LC1:
+ 302 0018 78203D20 		.ascii	"x = %ld, y = %ld, z = %ld\012\000"
+ 302      256C642C 
+ 302      2079203D 
+ 302      20256C64 
+ 302      2C207A20 
+ 303 0033 00       		.space	1
+ 304              	.LC2:
+ 305 0034 4144584C 		.ascii	"ADXL345 error %d\000"
+ 305      33343520 
+ 305      6572726F 
+ 305      72202564 
+ 305      00
+ 306              		.text
+ 307              	.Letext0:
+ 308              		.file 2 "/usr/include/newlib/machine/_default_types.h"
+ 309              		.file 3 "/usr/include/newlib/sys/_stdint.h"
+ 310              		.file 4 "Drivers/CMSIS/Include/core_cm3.h"
+ 311              		.file 5 "Drivers/CMSIS/Device/ST/STM32F1xx/Include/system_stm32f1xx.h"
+ 312              		.file 6 "Drivers/CMSIS/Device/ST/STM32F1xx/Include/stm32f103xb.h"
+ 313              		.file 7 "Drivers/CMSIS/Device/ST/STM32F1xx/Include/stm32f1xx.h"
+ 314              		.file 8 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_def.h"
+ 315              		.file 9 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_rcc.h"
+ 316              		.file 10 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_rcc_ex.h"
+ 317              		.file 11 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_dma.h"
+ 318              		.file 12 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_adc.h"
+ 319              		.file 13 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_i2c.h"
+ 320              		.file 14 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_spi.h"
+ 321              		.file 15 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h"
+ 322              		.file 16 "Inc/adc.h"
+ 323              		.file 17 "Inc/i2c.h"
+ 324              		.file 18 "Inc/spi.h"
+ 325              		.file 19 "/usr/include/newlib/sys/lock.h"
+ 326              		.file 20 "/usr/include/newlib/sys/_types.h"
+ 327              		.file 21 "/usr/lib/gcc/arm-none-eabi/6.3.1/include/stddef.h"
+ 328              		.file 22 "/usr/include/newlib/sys/reent.h"
+ 329              		.file 23 "/usr/include/newlib/stdlib.h"
+ 330              		.file 24 "Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h"
+ 331              		.file 25 "Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc/usbd_cdc.h"
+ 332              		.file 26 "Inc/usbd_cdc_if.h"
+ 333              		.file 27 "../driver/adxl345.h"
+ 334              		.file 28 "Inc/gpio.h"
+ 335              		.file 29 "Inc/dma.h"
+ 336              		.file 30 "Inc/usb_device.h"
+ 337              		.file 31 "/usr/include/newlib/stdio.h"
+ 338              		.file 32 "/usr/include/newlib/string.h"
+ARM GAS  /tmp/ccnpP3C0.s 			page 11
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 main.c
+     /tmp/ccnpP3C0.s:16     .text.SystemClock_Config:0000000000000000 $t
+     /tmp/ccnpP3C0.s:23     .text.SystemClock_Config:0000000000000000 SystemClock_Config
+     /tmp/ccnpP3C0.s:116    .text.main:0000000000000000 $t
+     /tmp/ccnpP3C0.s:123    .text.main:0000000000000000 main
+     /tmp/ccnpP3C0.s:262    .text.main:00000000000000bc $d
+     /tmp/ccnpP3C0.s:271    .text.Error_Handler:0000000000000000 $t
+     /tmp/ccnpP3C0.s:278    .text.Error_Handler:0000000000000000 Error_Handler
+     /tmp/ccnpP3C0.s:290    .bss.strbuf.8113:0000000000000000 $d
+     /tmp/ccnpP3C0.s:294    .bss.strbuf.8113:0000000000000000 strbuf.8113
+     /tmp/ccnpP3C0.s:297    .rodata.main.str1.4:0000000000000000 $d
+                     .debug_frame:0000000000000010 $d
+
+UNDEFINED SYMBOLS
+memset
+HAL_RCC_OscConfig
+HAL_RCC_ClockConfig
+HAL_RCCEx_PeriphCLKConfig
+HAL_Init
+MX_GPIO_Init
+MX_DMA_Init
+MX_ADC1_Init
+MX_I2C1_Init
+MX_SPI2_Init
+MX_USB_DEVICE_Init
+adxl345_i2c_init
+adxl345_init
+snprintf
+strlen
+CDC_Transmit_FS
+HAL_Delay
+adxl345_get_acc
+hi2c1

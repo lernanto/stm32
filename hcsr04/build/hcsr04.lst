@@ -1,0 +1,297 @@
+ARM GAS  /tmp/ccTarEdT.s 			page 1
+
+
+   1              		.cpu cortex-m3
+   2              		.eabi_attribute 20, 1
+   3              		.eabi_attribute 21, 1
+   4              		.eabi_attribute 23, 3
+   5              		.eabi_attribute 24, 1
+   6              		.eabi_attribute 25, 1
+   7              		.eabi_attribute 26, 1
+   8              		.eabi_attribute 30, 1
+   9              		.eabi_attribute 34, 1
+  10              		.eabi_attribute 18, 4
+  11              		.file	"hcsr04.c"
+  12              		.text
+  13              	.Ltext0:
+  14              		.cfi_sections	.debug_frame
+  15              		.section	.text.hcsr04_init,"ax",%progbits
+  16              		.align	1
+  17              		.global	hcsr04_init
+  18              		.syntax unified
+  19              		.thumb
+  20              		.thumb_func
+  21              		.fpu softvfp
+  23              	hcsr04_init:
+  24              	.LFB65:
+  25              		.file 1 "../driver/hcsr04.c"
+   1:../driver/hcsr04.c **** /**
+   2:../driver/hcsr04.c ****  * HC-SR04 超声测距传感器驱动.
+   3:../driver/hcsr04.c ****  */
+   4:../driver/hcsr04.c **** 
+   5:../driver/hcsr04.c **** #include "stm32f1xx_hal.h"
+   6:../driver/hcsr04.c **** 
+   7:../driver/hcsr04.c **** #include "common.h"
+   8:../driver/hcsr04.c **** #include "hcsr04.h"
+   9:../driver/hcsr04.c **** 
+  10:../driver/hcsr04.c **** int hcsr04_init(
+  11:../driver/hcsr04.c ****     Hcsr04Handle *handle,
+  12:../driver/hcsr04.c ****     GPIO_TypeDef *trig_port,
+  13:../driver/hcsr04.c ****     uint16_t trig_pin,
+  14:../driver/hcsr04.c ****     GPIO_TypeDef *echo_port,
+  15:../driver/hcsr04.c ****     uint16_t echo_pin
+  16:../driver/hcsr04.c **** )
+  17:../driver/hcsr04.c **** {
+  26              		.loc 1 17 0
+  27              		.cfi_startproc
+  28              		@ args = 4, pretend = 0, frame = 0
+  29              		@ frame_needed = 0, uses_anonymous_args = 0
+  30              	.LVL0:
+  31 0000 10B5     		push	{r4, lr}
+  32              	.LCFI0:
+  33              		.cfi_def_cfa_offset 8
+  34              		.cfi_offset 4, -8
+  35              		.cfi_offset 14, -4
+  36 0002 0C46     		mov	r4, r1
+  37 0004 1146     		mov	r1, r2
+  38              	.LVL1:
+  18:../driver/hcsr04.c ****     handle->trig_port = trig_port;
+  39              		.loc 1 18 0
+  40 0006 0460     		str	r4, [r0]
+ARM GAS  /tmp/ccTarEdT.s 			page 2
+
+
+  19:../driver/hcsr04.c ****     handle->trig_pin = trig_pin;
+  41              		.loc 1 19 0
+  42 0008 8280     		strh	r2, [r0, #4]	@ movhi
+  20:../driver/hcsr04.c ****     handle->echo_port = echo_port;
+  43              		.loc 1 20 0
+  44 000a 8360     		str	r3, [r0, #8]
+  21:../driver/hcsr04.c ****     handle->echo_pin = echo_pin;
+  45              		.loc 1 21 0
+  46 000c BDF80830 		ldrh	r3, [sp, #8]
+  47              	.LVL2:
+  48 0010 8381     		strh	r3, [r0, #12]	@ movhi
+  22:../driver/hcsr04.c **** 
+  23:../driver/hcsr04.c ****     HAL_GPIO_WritePin(trig_port, trig_pin, GPIO_PIN_RESET);
+  49              		.loc 1 23 0
+  50 0012 0022     		movs	r2, #0
+  51              	.LVL3:
+  52 0014 2046     		mov	r0, r4
+  53              	.LVL4:
+  54 0016 FFF7FEFF 		bl	HAL_GPIO_WritePin
+  55              	.LVL5:
+  24:../driver/hcsr04.c **** 
+  25:../driver/hcsr04.c ****     return 1;
+  26:../driver/hcsr04.c **** }
+  56              		.loc 1 26 0
+  57 001a 0120     		movs	r0, #1
+  58 001c 10BD     		pop	{r4, pc}
+  59              		.cfi_endproc
+  60              	.LFE65:
+  62              		.section	.text.hcsr04_get_dist,"ax",%progbits
+  63              		.align	1
+  64              		.global	hcsr04_get_dist
+  65              		.syntax unified
+  66              		.thumb
+  67              		.thumb_func
+  68              		.fpu softvfp
+  70              	hcsr04_get_dist:
+  71              	.LFB66:
+  27:../driver/hcsr04.c **** 
+  28:../driver/hcsr04.c **** uint32_t hcsr04_get_dist(Hcsr04Handle *handle)
+  29:../driver/hcsr04.c **** {
+  72              		.loc 1 29 0
+  73              		.cfi_startproc
+  74              		@ args = 0, pretend = 0, frame = 0
+  75              		@ frame_needed = 0, uses_anonymous_args = 0
+  76              	.LVL6:
+  77 0000 2DE9F041 		push	{r4, r5, r6, r7, r8, lr}
+  78              	.LCFI1:
+  79              		.cfi_def_cfa_offset 24
+  80              		.cfi_offset 4, -24
+  81              		.cfi_offset 5, -20
+  82              		.cfi_offset 6, -16
+  83              		.cfi_offset 7, -12
+  84              		.cfi_offset 8, -8
+  85              		.cfi_offset 14, -4
+  86 0004 0446     		mov	r4, r0
+  87              	.LVL7:
+  30:../driver/hcsr04.c ****     uint32_t startms = 0;
+ARM GAS  /tmp/ccTarEdT.s 			page 3
+
+
+  31:../driver/hcsr04.c ****     int32_t startval = 0;
+  32:../driver/hcsr04.c ****     uint32_t endms = 0;
+  33:../driver/hcsr04.c ****     int32_t endval = 0;
+  34:../driver/hcsr04.c ****     uint32_t timeus = 0;
+  35:../driver/hcsr04.c ****     GPIO_PinState echo = GPIO_PIN_RESET;
+  36:../driver/hcsr04.c **** 
+  37:../driver/hcsr04.c ****     /* 拉升 TRIG 引脚20微秒以上，发射超声波 */
+  38:../driver/hcsr04.c ****     HAL_GPIO_WritePin(handle->trig_port, handle->trig_pin, GPIO_PIN_SET);
+  88              		.loc 1 38 0
+  89 0006 0122     		movs	r2, #1
+  90 0008 8188     		ldrh	r1, [r0, #4]
+  91 000a 0068     		ldr	r0, [r0]
+  92              	.LVL8:
+  93 000c FFF7FEFF 		bl	HAL_GPIO_WritePin
+  94              	.LVL9:
+  39:../driver/hcsr04.c ****     delayus(20);
+  95              		.loc 1 39 0
+  96 0010 1420     		movs	r0, #20
+  97 0012 FFF7FEFF 		bl	delayus
+  98              	.LVL10:
+  40:../driver/hcsr04.c ****     HAL_GPIO_WritePin(handle->trig_port, handle->trig_pin, GPIO_PIN_RESET);
+  99              		.loc 1 40 0
+ 100 0016 0022     		movs	r2, #0
+ 101 0018 A188     		ldrh	r1, [r4, #4]
+ 102 001a 2068     		ldr	r0, [r4]
+ 103 001c FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 104              	.LVL11:
+  41:../driver/hcsr04.c **** 
+  42:../driver/hcsr04.c ****     /* 等待 ECHO 引脚返回高电平，最多等待1毫秒 */
+  43:../driver/hcsr04.c ****     startms = HAL_GetTick();
+ 105              		.loc 1 43 0
+ 106 0020 FFF7FEFF 		bl	HAL_GetTick
+ 107              	.LVL12:
+ 108 0024 8046     		mov	r8, r0
+ 109              	.LVL13:
+ 110              	.L5:
+  44:../driver/hcsr04.c ****     do
+  45:../driver/hcsr04.c ****     {
+  46:../driver/hcsr04.c ****         echo = HAL_GPIO_ReadPin(handle->echo_port, handle->echo_pin);
+ 111              		.loc 1 46 0 discriminator 2
+ 112 0026 A189     		ldrh	r1, [r4, #12]
+ 113 0028 A068     		ldr	r0, [r4, #8]
+ 114 002a FFF7FEFF 		bl	HAL_GPIO_ReadPin
+ 115              	.LVL14:
+ 116 002e 0646     		mov	r6, r0
+ 117              	.LVL15:
+  47:../driver/hcsr04.c ****         endms = HAL_GetTick();
+ 118              		.loc 1 47 0 discriminator 2
+ 119 0030 FFF7FEFF 		bl	HAL_GetTick
+ 120              	.LVL16:
+ 121 0034 0546     		mov	r5, r0
+ 122              	.LVL17:
+  48:../driver/hcsr04.c ****         startval = SysTick->VAL;
+ 123              		.loc 1 48 0 discriminator 2
+ 124 0036 154B     		ldr	r3, .L10
+ 125 0038 9F68     		ldr	r7, [r3, #8]
+ 126              	.LVL18:
+ARM GAS  /tmp/ccTarEdT.s 			page 4
+
+
+  49:../driver/hcsr04.c ****     } while ((GPIO_PIN_RESET == echo) && (endms < startms + 1));
+ 127              		.loc 1 49 0 discriminator 2
+ 128 003a 1EB9     		cbnz	r6, .L4
+ 129              		.loc 1 49 0 is_stmt 0 discriminator 1
+ 130 003c 08F10103 		add	r3, r8, #1
+ 131 0040 9842     		cmp	r0, r3
+ 132 0042 F0D3     		bcc	.L5
+ 133              	.L4:
+  50:../driver/hcsr04.c **** 
+  51:../driver/hcsr04.c ****     if (GPIO_PIN_RESET == echo)
+ 134              		.loc 1 51 0 is_stmt 1
+ 135 0044 1EB9     		cbnz	r6, .L7
+  52:../driver/hcsr04.c ****     {
+  53:../driver/hcsr04.c ****         /* 超时，检测不到障碍物 */
+  54:../driver/hcsr04.c ****         return HCSR04_INVALID_DISTANCE;
+ 136              		.loc 1 54 0
+ 137 0046 4FF0FF30 		mov	r0, #-1
+ 138              	.LVL19:
+  55:../driver/hcsr04.c ****     }
+  56:../driver/hcsr04.c **** 
+  57:../driver/hcsr04.c ****     /* 检测到 ECHO 高电平，等待高电平结束，计算持续时间 */
+  58:../driver/hcsr04.c ****     startms = endms;
+  59:../driver/hcsr04.c ****     while (GPIO_PIN_SET == HAL_GPIO_ReadPin(handle->echo_port, handle->echo_pin));
+  60:../driver/hcsr04.c ****     endms = HAL_GetTick();
+  61:../driver/hcsr04.c ****     endval = SysTick->VAL;
+  62:../driver/hcsr04.c ****     timeus = (endms - startms) * 1000 + (startval - endval) / 72;
+  63:../driver/hcsr04.c **** 
+  64:../driver/hcsr04.c ****     /* 根据超声波在空气中的传播速度计算障碍物距离，单位毫米 */
+  65:../driver/hcsr04.c ****     return timeus * 170 / 1000;
+  66:../driver/hcsr04.c **** }
+ 139              		.loc 1 66 0
+ 140 004a BDE8F081 		pop	{r4, r5, r6, r7, r8, pc}
+ 141              	.LVL20:
+ 142              	.L7:
+  59:../driver/hcsr04.c ****     endms = HAL_GetTick();
+ 143              		.loc 1 59 0 discriminator 1
+ 144 004e A189     		ldrh	r1, [r4, #12]
+ 145 0050 A068     		ldr	r0, [r4, #8]
+ 146 0052 FFF7FEFF 		bl	HAL_GPIO_ReadPin
+ 147              	.LVL21:
+ 148 0056 0128     		cmp	r0, #1
+ 149 0058 F9D0     		beq	.L7
+  60:../driver/hcsr04.c ****     endval = SysTick->VAL;
+ 150              		.loc 1 60 0
+ 151 005a FFF7FEFF 		bl	HAL_GetTick
+ 152              	.LVL22:
+  61:../driver/hcsr04.c ****     timeus = (endms - startms) * 1000 + (startval - endval) / 72;
+ 153              		.loc 1 61 0
+ 154 005e 0B4B     		ldr	r3, .L10
+ 155 0060 9B68     		ldr	r3, [r3, #8]
+ 156              	.LVL23:
+  62:../driver/hcsr04.c **** 
+ 157              		.loc 1 62 0
+ 158 0062 401B     		subs	r0, r0, r5
+ 159              	.LVL24:
+ 160 0064 FF1A     		subs	r7, r7, r3
+ 161              	.LVL25:
+ARM GAS  /tmp/ccTarEdT.s 			page 5
+
+
+ 162 0066 0A4B     		ldr	r3, .L10+4
+ 163              	.LVL26:
+ 164 0068 83FB0723 		smull	r2, r3, r3, r7
+ 165 006c FF17     		asrs	r7, r7, #31
+ 166 006e C7EB2317 		rsb	r7, r7, r3, asr #4
+ 167 0072 4FF47A75 		mov	r5, #1000
+ 168 0076 05FB0070 		mla	r0, r5, r0, r7
+ 169              	.LVL27:
+  65:../driver/hcsr04.c **** }
+ 170              		.loc 1 65 0
+ 171 007a AA23     		movs	r3, #170
+ 172 007c 03FB00F0 		mul	r0, r3, r0
+ 173              	.LVL28:
+ 174 0080 044B     		ldr	r3, .L10+8
+ 175 0082 A3FB0030 		umull	r3, r0, r3, r0
+ 176 0086 8009     		lsrs	r0, r0, #6
+ 177 0088 BDE8F081 		pop	{r4, r5, r6, r7, r8, pc}
+ 178              	.LVL29:
+ 179              	.L11:
+ 180              		.align	2
+ 181              	.L10:
+ 182 008c 10E000E0 		.word	-536813552
+ 183 0090 398EE338 		.word	954437177
+ 184 0094 D34D6210 		.word	274877907
+ 185              		.cfi_endproc
+ 186              	.LFE66:
+ 188              		.text
+ 189              	.Letext0:
+ 190              		.file 2 "/usr/include/newlib/machine/_default_types.h"
+ 191              		.file 3 "/usr/include/newlib/sys/_stdint.h"
+ 192              		.file 4 "Drivers/CMSIS/Include/core_cm3.h"
+ 193              		.file 5 "Drivers/CMSIS/Device/ST/STM32F1xx/Include/system_stm32f1xx.h"
+ 194              		.file 6 "Drivers/CMSIS/Device/ST/STM32F1xx/Include/stm32f103xb.h"
+ 195              		.file 7 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_gpio.h"
+ 196              		.file 8 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h"
+ 197              		.file 9 "../driver/hcsr04.h"
+ 198              		.file 10 "../driver/common.h"
+ARM GAS  /tmp/ccTarEdT.s 			page 6
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 hcsr04.c
+     /tmp/ccTarEdT.s:16     .text.hcsr04_init:0000000000000000 $t
+     /tmp/ccTarEdT.s:23     .text.hcsr04_init:0000000000000000 hcsr04_init
+     /tmp/ccTarEdT.s:63     .text.hcsr04_get_dist:0000000000000000 $t
+     /tmp/ccTarEdT.s:70     .text.hcsr04_get_dist:0000000000000000 hcsr04_get_dist
+     /tmp/ccTarEdT.s:182    .text.hcsr04_get_dist:000000000000008c $d
+                     .debug_frame:0000000000000010 $d
+
+UNDEFINED SYMBOLS
+HAL_GPIO_WritePin
+delayus
+HAL_GetTick
+HAL_GPIO_ReadPin
