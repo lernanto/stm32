@@ -1,0 +1,1263 @@
+ARM GAS  /tmp/ccH1FB8d.s 			page 1
+
+
+   1              		.cpu cortex-m3
+   2              		.eabi_attribute 20, 1
+   3              		.eabi_attribute 21, 1
+   4              		.eabi_attribute 23, 3
+   5              		.eabi_attribute 24, 1
+   6              		.eabi_attribute 25, 1
+   7              		.eabi_attribute 26, 1
+   8              		.eabi_attribute 30, 1
+   9              		.eabi_attribute 34, 1
+  10              		.eabi_attribute 18, 4
+  11              		.file	"adxl345.c"
+  12              		.text
+  13              	.Ltext0:
+  14              		.cfi_sections	.debug_frame
+  15              		.section	.text.adxl345_i2c_write,"ax",%progbits
+  16              		.align	1
+  17              		.global	adxl345_i2c_write
+  18              		.syntax unified
+  19              		.thumb
+  20              		.thumb_func
+  21              		.fpu softvfp
+  23              	adxl345_i2c_write:
+  24              	.LFB66:
+  25              		.file 1 "../driver/adxl345.c"
+   1:../driver/adxl345.c **** /**
+   2:../driver/adxl345.c ****  *
+   3:../driver/adxl345.c ****  */
+   4:../driver/adxl345.c **** 
+   5:../driver/adxl345.c **** #include "stm32f1xx_hal.h"
+   6:../driver/adxl345.c **** 
+   7:../driver/adxl345.c **** #include "common.h"
+   8:../driver/adxl345.c **** #include "adxl345.h"
+   9:../driver/adxl345.c **** 
+  10:../driver/adxl345.c **** 
+  11:../driver/adxl345.c **** HAL_StatusTypeDef adxl345_i2c_init(
+  12:../driver/adxl345.c ****     Adxl345I2cHandle *handle,
+  13:../driver/adxl345.c ****     I2C_HandleTypeDef *hi2c,
+  14:../driver/adxl345.c ****     uint8_t addr,
+  15:../driver/adxl345.c ****     uint32_t timeout
+  16:../driver/adxl345.c **** )
+  17:../driver/adxl345.c **** {
+  18:../driver/adxl345.c ****     handle->mode = ADXL345_I2C;
+  19:../driver/adxl345.c ****     /* 设置对应的读写函数指针 */
+  20:../driver/adxl345.c ****     handle->write = (HAL_StatusTypeDef (*)(void *, uint8_t, uint8_t))adxl345_i2c_write;
+  21:../driver/adxl345.c ****     handle->read = (HAL_StatusTypeDef (*)(void *, uint8_t, uint8_t *))adxl345_i2c_read;
+  22:../driver/adxl345.c ****     handle->readmb = (HAL_StatusTypeDef (*)(void *, uint8_t, uint16_t *))adxl345_i2c_readmb;
+  23:../driver/adxl345.c ****     handle->hi2c = hi2c;
+  24:../driver/adxl345.c ****     handle->addr = addr;
+  25:../driver/adxl345.c ****     handle->timeout = timeout;
+  26:../driver/adxl345.c **** 
+  27:../driver/adxl345.c ****     return HAL_OK;
+  28:../driver/adxl345.c **** }
+  29:../driver/adxl345.c **** 
+  30:../driver/adxl345.c **** HAL_StatusTypeDef adxl345_i2c_write(
+  31:../driver/adxl345.c ****     Adxl345I2cHandle *handle,
+  32:../driver/adxl345.c ****     uint8_t addr,
+  33:../driver/adxl345.c ****     uint8_t data
+ARM GAS  /tmp/ccH1FB8d.s 			page 2
+
+
+  34:../driver/adxl345.c **** )
+  35:../driver/adxl345.c **** {
+  26              		.loc 1 35 0
+  27              		.cfi_startproc
+  28              		@ args = 0, pretend = 0, frame = 8
+  29              		@ frame_needed = 0, uses_anonymous_args = 0
+  30              	.LVL0:
+  31 0000 30B5     		push	{r4, r5, lr}
+  32              	.LCFI0:
+  33              		.cfi_def_cfa_offset 12
+  34              		.cfi_offset 4, -12
+  35              		.cfi_offset 5, -8
+  36              		.cfi_offset 14, -4
+  37 0002 87B0     		sub	sp, sp, #28
+  38              	.LCFI1:
+  39              		.cfi_def_cfa_offset 40
+  40 0004 0346     		mov	r3, r0
+  41 0006 06AC     		add	r4, sp, #24
+  42 0008 04F8012D 		strb	r2, [r4, #-1]!
+  36:../driver/adxl345.c ****     return HAL_I2C_Mem_Write(
+  43              		.loc 1 36 0
+  44 000c 057D     		ldrb	r5, [r0, #20]	@ zero_extendqisi2
+  45 000e 0069     		ldr	r0, [r0, #16]
+  46              	.LVL1:
+  47 0010 9B69     		ldr	r3, [r3, #24]
+  48              	.LVL2:
+  49 0012 0293     		str	r3, [sp, #8]
+  50 0014 0123     		movs	r3, #1
+  51 0016 0193     		str	r3, [sp, #4]
+  52 0018 0094     		str	r4, [sp]
+  53 001a 0A46     		mov	r2, r1
+  54              	.LVL3:
+  55 001c 2946     		mov	r1, r5
+  56              	.LVL4:
+  57 001e FFF7FEFF 		bl	HAL_I2C_Mem_Write
+  58              	.LVL5:
+  37:../driver/adxl345.c ****         handle->hi2c,
+  38:../driver/adxl345.c ****         handle->addr,
+  39:../driver/adxl345.c ****         addr,
+  40:../driver/adxl345.c ****         I2C_MEMADD_SIZE_8BIT,
+  41:../driver/adxl345.c ****         &data,
+  42:../driver/adxl345.c ****         1,
+  43:../driver/adxl345.c ****         handle->timeout
+  44:../driver/adxl345.c ****     );
+  45:../driver/adxl345.c **** }
+  59              		.loc 1 45 0
+  60 0022 07B0     		add	sp, sp, #28
+  61              	.LCFI2:
+  62              		.cfi_def_cfa_offset 12
+  63              		@ sp needed
+  64 0024 30BD     		pop	{r4, r5, pc}
+  65              		.cfi_endproc
+  66              	.LFE66:
+  68              		.section	.text.adxl345_i2c_read,"ax",%progbits
+  69              		.align	1
+  70              		.global	adxl345_i2c_read
+  71              		.syntax unified
+ARM GAS  /tmp/ccH1FB8d.s 			page 3
+
+
+  72              		.thumb
+  73              		.thumb_func
+  74              		.fpu softvfp
+  76              	adxl345_i2c_read:
+  77              	.LFB67:
+  46:../driver/adxl345.c **** 
+  47:../driver/adxl345.c **** HAL_StatusTypeDef adxl345_i2c_read(
+  48:../driver/adxl345.c ****     Adxl345I2cHandle *handle,
+  49:../driver/adxl345.c ****     uint8_t addr,
+  50:../driver/adxl345.c ****     uint8_t *data
+  51:../driver/adxl345.c **** )
+  52:../driver/adxl345.c **** {
+  78              		.loc 1 52 0
+  79              		.cfi_startproc
+  80              		@ args = 0, pretend = 0, frame = 0
+  81              		@ frame_needed = 0, uses_anonymous_args = 0
+  82              	.LVL6:
+  83 0000 10B5     		push	{r4, lr}
+  84              	.LCFI3:
+  85              		.cfi_def_cfa_offset 8
+  86              		.cfi_offset 4, -8
+  87              		.cfi_offset 14, -4
+  88 0002 84B0     		sub	sp, sp, #16
+  89              	.LCFI4:
+  90              		.cfi_def_cfa_offset 24
+  91 0004 0346     		mov	r3, r0
+  53:../driver/adxl345.c ****     return HAL_I2C_Mem_Read(
+  92              		.loc 1 53 0
+  93 0006 047D     		ldrb	r4, [r0, #20]	@ zero_extendqisi2
+  94 0008 0069     		ldr	r0, [r0, #16]
+  95              	.LVL7:
+  96 000a 9B69     		ldr	r3, [r3, #24]
+  97              	.LVL8:
+  98 000c 0293     		str	r3, [sp, #8]
+  99 000e 0123     		movs	r3, #1
+ 100 0010 0193     		str	r3, [sp, #4]
+ 101 0012 0092     		str	r2, [sp]
+ 102 0014 0A46     		mov	r2, r1
+ 103              	.LVL9:
+ 104 0016 2146     		mov	r1, r4
+ 105              	.LVL10:
+ 106 0018 FFF7FEFF 		bl	HAL_I2C_Mem_Read
+ 107              	.LVL11:
+  54:../driver/adxl345.c ****         handle->hi2c,
+  55:../driver/adxl345.c ****         handle->addr,
+  56:../driver/adxl345.c ****         addr,
+  57:../driver/adxl345.c ****         I2C_MEMADD_SIZE_8BIT,
+  58:../driver/adxl345.c ****         data,
+  59:../driver/adxl345.c ****         1,
+  60:../driver/adxl345.c ****         handle->timeout
+  61:../driver/adxl345.c ****     );
+  62:../driver/adxl345.c **** }
+ 108              		.loc 1 62 0
+ 109 001c 04B0     		add	sp, sp, #16
+ 110              	.LCFI5:
+ 111              		.cfi_def_cfa_offset 8
+ 112              		@ sp needed
+ARM GAS  /tmp/ccH1FB8d.s 			page 4
+
+
+ 113 001e 10BD     		pop	{r4, pc}
+ 114              		.cfi_endproc
+ 115              	.LFE67:
+ 117              		.section	.text.adxl345_i2c_readmb,"ax",%progbits
+ 118              		.align	1
+ 119              		.global	adxl345_i2c_readmb
+ 120              		.syntax unified
+ 121              		.thumb
+ 122              		.thumb_func
+ 123              		.fpu softvfp
+ 125              	adxl345_i2c_readmb:
+ 126              	.LFB68:
+  63:../driver/adxl345.c **** 
+  64:../driver/adxl345.c **** HAL_StatusTypeDef adxl345_i2c_readmb(
+  65:../driver/adxl345.c ****     Adxl345I2cHandle *handle,
+  66:../driver/adxl345.c ****     uint8_t addr,
+  67:../driver/adxl345.c ****     uint16_t *data
+  68:../driver/adxl345.c **** )
+  69:../driver/adxl345.c **** {
+ 127              		.loc 1 69 0
+ 128              		.cfi_startproc
+ 129              		@ args = 0, pretend = 0, frame = 8
+ 130              		@ frame_needed = 0, uses_anonymous_args = 0
+ 131              	.LVL12:
+ 132 0000 30B5     		push	{r4, r5, lr}
+ 133              	.LCFI6:
+ 134              		.cfi_def_cfa_offset 12
+ 135              		.cfi_offset 4, -12
+ 136              		.cfi_offset 5, -8
+ 137              		.cfi_offset 14, -4
+ 138 0002 87B0     		sub	sp, sp, #28
+ 139              	.LCFI7:
+ 140              		.cfi_def_cfa_offset 40
+ 141 0004 0346     		mov	r3, r0
+ 142 0006 1546     		mov	r5, r2
+ 143              	.LVL13:
+  70:../driver/adxl345.c ****     HAL_StatusTypeDef status = HAL_OK;
+  71:../driver/adxl345.c ****     uint8_t buf[2];
+  72:../driver/adxl345.c **** 
+  73:../driver/adxl345.c ****     status = HAL_I2C_Mem_Read(
+ 144              		.loc 1 73 0
+ 145 0008 0069     		ldr	r0, [r0, #16]
+ 146              	.LVL14:
+ 147 000a 1C7D     		ldrb	r4, [r3, #20]	@ zero_extendqisi2
+ 148 000c 9B69     		ldr	r3, [r3, #24]
+ 149              	.LVL15:
+ 150 000e 0293     		str	r3, [sp, #8]
+ 151 0010 0223     		movs	r3, #2
+ 152 0012 0193     		str	r3, [sp, #4]
+ 153 0014 05AB     		add	r3, sp, #20
+ 154 0016 0093     		str	r3, [sp]
+ 155 0018 0123     		movs	r3, #1
+ 156 001a 41F04002 		orr	r2, r1, #64
+ 157              	.LVL16:
+ 158 001e 2146     		mov	r1, r4
+ 159              	.LVL17:
+ 160 0020 FFF7FEFF 		bl	HAL_I2C_Mem_Read
+ARM GAS  /tmp/ccH1FB8d.s 			page 5
+
+
+ 161              	.LVL18:
+  74:../driver/adxl345.c ****         handle->hi2c,
+  75:../driver/adxl345.c ****         handle->addr,
+  76:../driver/adxl345.c ****         addr | ADXL345_MB,
+  77:../driver/adxl345.c ****         I2C_MEMADD_SIZE_8BIT,
+  78:../driver/adxl345.c ****         buf,
+  79:../driver/adxl345.c ****         2,
+  80:../driver/adxl345.c ****         handle->timeout
+  81:../driver/adxl345.c ****     );
+  82:../driver/adxl345.c **** 
+  83:../driver/adxl345.c ****     if (HAL_OK == status)
+ 162              		.loc 1 83 0
+ 163 0024 0246     		mov	r2, r0
+ 164 0026 30B9     		cbnz	r0, .L6
+  84:../driver/adxl345.c ****     {
+  85:../driver/adxl345.c ****         *data = (((uint16_t)buf[1] << 8) | buf[0]);
+ 165              		.loc 1 85 0
+ 166 0028 9DF81510 		ldrb	r1, [sp, #21]	@ zero_extendqisi2
+ 167 002c 9DF81430 		ldrb	r3, [sp, #20]	@ zero_extendqisi2
+ 168 0030 43EA0123 		orr	r3, r3, r1, lsl #8
+ 169 0034 2B80     		strh	r3, [r5]	@ movhi
+ 170              	.L6:
+  86:../driver/adxl345.c ****     }
+  87:../driver/adxl345.c **** 
+  88:../driver/adxl345.c ****     return status;
+  89:../driver/adxl345.c **** }
+ 171              		.loc 1 89 0
+ 172 0036 1046     		mov	r0, r2
+ 173              	.LVL19:
+ 174 0038 07B0     		add	sp, sp, #28
+ 175              	.LCFI8:
+ 176              		.cfi_def_cfa_offset 12
+ 177              		@ sp needed
+ 178 003a 30BD     		pop	{r4, r5, pc}
+ 179              		.cfi_endproc
+ 180              	.LFE68:
+ 182              		.section	.text.adxl345_spi_write,"ax",%progbits
+ 183              		.align	1
+ 184              		.global	adxl345_spi_write
+ 185              		.syntax unified
+ 186              		.thumb
+ 187              		.thumb_func
+ 188              		.fpu softvfp
+ 190              	adxl345_spi_write:
+ 191              	.LFB70:
+  90:../driver/adxl345.c **** 
+  91:../driver/adxl345.c **** HAL_StatusTypeDef adxl345_spi_init(
+  92:../driver/adxl345.c ****     Adxl345SpiHandle *handle,
+  93:../driver/adxl345.c ****     SPI_HandleTypeDef *hspi,
+  94:../driver/adxl345.c ****     GPIO_TypeDef *cs_port,
+  95:../driver/adxl345.c ****     uint16_t cs_pin,
+  96:../driver/adxl345.c ****     uint32_t timeout
+  97:../driver/adxl345.c **** )
+  98:../driver/adxl345.c **** {
+  99:../driver/adxl345.c ****     handle->mode = ADXL345_SPI;
+ 100:../driver/adxl345.c ****     /* 设置相应读写函数指针 */
+ 101:../driver/adxl345.c ****     handle->write = (HAL_StatusTypeDef (*)(void *, uint8_t, uint8_t))adxl345_spi_write;
+ARM GAS  /tmp/ccH1FB8d.s 			page 6
+
+
+ 102:../driver/adxl345.c ****     handle->read = (HAL_StatusTypeDef (*)(void *, uint8_t, uint8_t *))adxl345_spi_read;
+ 103:../driver/adxl345.c ****     handle->readmb = (HAL_StatusTypeDef (*)(void *, uint8_t, uint16_t *))adxl345_spi_readmb;
+ 104:../driver/adxl345.c ****     handle->cs_port = cs_port;
+ 105:../driver/adxl345.c ****     handle->cs_pin = cs_pin;
+ 106:../driver/adxl345.c ****     handle->timeout = timeout;
+ 107:../driver/adxl345.c **** 
+ 108:../driver/adxl345.c ****     return HAL_OK;
+ 109:../driver/adxl345.c **** }
+ 110:../driver/adxl345.c **** 
+ 111:../driver/adxl345.c **** HAL_StatusTypeDef adxl345_spi_write(
+ 112:../driver/adxl345.c ****     Adxl345SpiHandle *handle,
+ 113:../driver/adxl345.c ****     uint8_t addr,
+ 114:../driver/adxl345.c ****     uint8_t data
+ 115:../driver/adxl345.c **** )
+ 116:../driver/adxl345.c **** {
+ 192              		.loc 1 116 0
+ 193              		.cfi_startproc
+ 194              		@ args = 0, pretend = 0, frame = 8
+ 195              		@ frame_needed = 0, uses_anonymous_args = 0
+ 196              	.LVL20:
+ 197 0000 30B5     		push	{r4, r5, lr}
+ 198              	.LCFI9:
+ 199              		.cfi_def_cfa_offset 12
+ 200              		.cfi_offset 4, -12
+ 201              		.cfi_offset 5, -8
+ 202              		.cfi_offset 14, -4
+ 203 0002 83B0     		sub	sp, sp, #12
+ 204              	.LCFI10:
+ 205              		.cfi_def_cfa_offset 24
+ 206 0004 0446     		mov	r4, r0
+ 207              	.LVL21:
+ 117:../driver/adxl345.c ****     HAL_StatusTypeDef status = HAL_OK;
+ 118:../driver/adxl345.c ****     uint8_t buf[2] = {addr, data};
+ 208              		.loc 1 118 0
+ 209 0006 8DF80410 		strb	r1, [sp, #4]
+ 210 000a 8DF80520 		strb	r2, [sp, #5]
+ 119:../driver/adxl345.c **** 
+ 120:../driver/adxl345.c ****     delayus(10);
+ 211              		.loc 1 120 0
+ 212 000e 0A20     		movs	r0, #10
+ 213              	.LVL22:
+ 214 0010 FFF7FEFF 		bl	delayus
+ 215              	.LVL23:
+ 121:../driver/adxl345.c ****     /* SPI 片选使能 */
+ 122:../driver/adxl345.c ****     HAL_GPIO_WritePin(handle->cs_port, handle->cs_pin, GPIO_PIN_RESET);
+ 216              		.loc 1 122 0
+ 217 0014 0022     		movs	r2, #0
+ 218 0016 218B     		ldrh	r1, [r4, #24]
+ 219 0018 6069     		ldr	r0, [r4, #20]
+ 220 001a FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 221              	.LVL24:
+ 123:../driver/adxl345.c ****     delayus(10);
+ 222              		.loc 1 123 0
+ 223 001e 0A20     		movs	r0, #10
+ 224 0020 FFF7FEFF 		bl	delayus
+ 225              	.LVL25:
+ 124:../driver/adxl345.c ****     status = HAL_SPI_Transmit(handle->hspi, buf, 2, handle->timeout);
+ARM GAS  /tmp/ccH1FB8d.s 			page 7
+
+
+ 226              		.loc 1 124 0
+ 227 0024 E369     		ldr	r3, [r4, #28]
+ 228 0026 0222     		movs	r2, #2
+ 229 0028 01A9     		add	r1, sp, #4
+ 230 002a 2069     		ldr	r0, [r4, #16]
+ 231 002c FFF7FEFF 		bl	HAL_SPI_Transmit
+ 232              	.LVL26:
+ 233 0030 0546     		mov	r5, r0
+ 234              	.LVL27:
+ 125:../driver/adxl345.c ****     delayus(10);
+ 235              		.loc 1 125 0
+ 236 0032 0A20     		movs	r0, #10
+ 237 0034 FFF7FEFF 		bl	delayus
+ 238              	.LVL28:
+ 126:../driver/adxl345.c ****     /* SPI 取消片选 */
+ 127:../driver/adxl345.c ****     HAL_GPIO_WritePin(handle->cs_port, handle->cs_pin, GPIO_PIN_SET);
+ 239              		.loc 1 127 0
+ 240 0038 0122     		movs	r2, #1
+ 241 003a 218B     		ldrh	r1, [r4, #24]
+ 242 003c 6069     		ldr	r0, [r4, #20]
+ 243 003e FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 244              	.LVL29:
+ 128:../driver/adxl345.c **** 
+ 129:../driver/adxl345.c ****     return status;
+ 130:../driver/adxl345.c **** }
+ 245              		.loc 1 130 0
+ 246 0042 2846     		mov	r0, r5
+ 247 0044 03B0     		add	sp, sp, #12
+ 248              	.LCFI11:
+ 249              		.cfi_def_cfa_offset 12
+ 250              		@ sp needed
+ 251 0046 30BD     		pop	{r4, r5, pc}
+ 252              		.cfi_endproc
+ 253              	.LFE70:
+ 255              		.section	.text.adxl345_spi_read,"ax",%progbits
+ 256              		.align	1
+ 257              		.global	adxl345_spi_read
+ 258              		.syntax unified
+ 259              		.thumb
+ 260              		.thumb_func
+ 261              		.fpu softvfp
+ 263              	adxl345_spi_read:
+ 264              	.LFB71:
+ 131:../driver/adxl345.c **** 
+ 132:../driver/adxl345.c **** HAL_StatusTypeDef adxl345_spi_read(
+ 133:../driver/adxl345.c ****     Adxl345SpiHandle *handle,
+ 134:../driver/adxl345.c ****     uint8_t addr,
+ 135:../driver/adxl345.c ****     uint8_t *data
+ 136:../driver/adxl345.c **** )
+ 137:../driver/adxl345.c **** {
+ 265              		.loc 1 137 0
+ 266              		.cfi_startproc
+ 267              		@ args = 0, pretend = 0, frame = 8
+ 268              		@ frame_needed = 0, uses_anonymous_args = 0
+ 269              	.LVL30:
+ 270 0000 70B5     		push	{r4, r5, r6, lr}
+ 271              	.LCFI12:
+ARM GAS  /tmp/ccH1FB8d.s 			page 8
+
+
+ 272              		.cfi_def_cfa_offset 16
+ 273              		.cfi_offset 4, -16
+ 274              		.cfi_offset 5, -12
+ 275              		.cfi_offset 6, -8
+ 276              		.cfi_offset 14, -4
+ 277 0002 82B0     		sub	sp, sp, #8
+ 278              	.LCFI13:
+ 279              		.cfi_def_cfa_offset 24
+ 280 0004 0446     		mov	r4, r0
+ 281 0006 1646     		mov	r6, r2
+ 282              	.LVL31:
+ 138:../driver/adxl345.c ****     HAL_StatusTypeDef status = HAL_OK;
+ 139:../driver/adxl345.c **** 
+ 140:../driver/adxl345.c ****     /* SPI 地址要置读标志位 */
+ 141:../driver/adxl345.c ****     addr |= ADXL345_RW;
+ 283              		.loc 1 141 0
+ 284 0008 61F07F01 		orn	r1, r1, #127
+ 285              	.LVL32:
+ 286 000c 02AD     		add	r5, sp, #8
+ 287 000e 05F8011D 		strb	r1, [r5, #-1]!
+ 142:../driver/adxl345.c **** 
+ 143:../driver/adxl345.c ****     delayus(10);
+ 288              		.loc 1 143 0
+ 289 0012 0A20     		movs	r0, #10
+ 290              	.LVL33:
+ 291 0014 FFF7FEFF 		bl	delayus
+ 292              	.LVL34:
+ 144:../driver/adxl345.c ****     /* SPI 片选使能 */
+ 145:../driver/adxl345.c ****     HAL_GPIO_WritePin(handle->cs_port, handle->cs_pin, GPIO_PIN_RESET);
+ 293              		.loc 1 145 0
+ 294 0018 0022     		movs	r2, #0
+ 295 001a 218B     		ldrh	r1, [r4, #24]
+ 296 001c 6069     		ldr	r0, [r4, #20]
+ 297 001e FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 298              	.LVL35:
+ 146:../driver/adxl345.c ****     delayus(10);
+ 299              		.loc 1 146 0
+ 300 0022 0A20     		movs	r0, #10
+ 301 0024 FFF7FEFF 		bl	delayus
+ 302              	.LVL36:
+ 147:../driver/adxl345.c ****     status = HAL_SPI_Transmit(handle->hspi, &addr, 1, handle->timeout);
+ 303              		.loc 1 147 0
+ 304 0028 E369     		ldr	r3, [r4, #28]
+ 305 002a 0122     		movs	r2, #1
+ 306 002c 2946     		mov	r1, r5
+ 307 002e 2069     		ldr	r0, [r4, #16]
+ 308 0030 FFF7FEFF 		bl	HAL_SPI_Transmit
+ 309              	.LVL37:
+ 148:../driver/adxl345.c ****     if (HAL_OK == status)
+ 310              		.loc 1 148 0
+ 311 0034 0546     		mov	r5, r0
+ 312 0036 38B1     		cbz	r0, .L13
+ 313              	.LVL38:
+ 314              	.L11:
+ 149:../driver/adxl345.c ****     {
+ 150:../driver/adxl345.c ****         status = HAL_SPI_Receive(handle->hspi, data, 1, handle->timeout);
+ 151:../driver/adxl345.c ****     }
+ARM GAS  /tmp/ccH1FB8d.s 			page 9
+
+
+ 152:../driver/adxl345.c ****     /* 取消 SPI 片选 */
+ 153:../driver/adxl345.c ****     HAL_GPIO_WritePin(handle->cs_port, handle->cs_pin, GPIO_PIN_SET);
+ 315              		.loc 1 153 0
+ 316 0038 0122     		movs	r2, #1
+ 317 003a 218B     		ldrh	r1, [r4, #24]
+ 318 003c 6069     		ldr	r0, [r4, #20]
+ 319 003e FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 320              	.LVL39:
+ 154:../driver/adxl345.c **** 
+ 155:../driver/adxl345.c ****     return status;
+ 156:../driver/adxl345.c **** }
+ 321              		.loc 1 156 0
+ 322 0042 2846     		mov	r0, r5
+ 323 0044 02B0     		add	sp, sp, #8
+ 324              	.LCFI14:
+ 325              		.cfi_remember_state
+ 326              		.cfi_def_cfa_offset 16
+ 327              		@ sp needed
+ 328 0046 70BD     		pop	{r4, r5, r6, pc}
+ 329              	.LVL40:
+ 330              	.L13:
+ 331              	.LCFI15:
+ 332              		.cfi_restore_state
+ 150:../driver/adxl345.c ****     }
+ 333              		.loc 1 150 0
+ 334 0048 E369     		ldr	r3, [r4, #28]
+ 335 004a 0122     		movs	r2, #1
+ 336 004c 3146     		mov	r1, r6
+ 337 004e 2069     		ldr	r0, [r4, #16]
+ 338              	.LVL41:
+ 339 0050 FFF7FEFF 		bl	HAL_SPI_Receive
+ 340              	.LVL42:
+ 341 0054 0546     		mov	r5, r0
+ 342              	.LVL43:
+ 343 0056 EFE7     		b	.L11
+ 344              		.cfi_endproc
+ 345              	.LFE71:
+ 347              		.section	.text.adxl345_spi_readmb,"ax",%progbits
+ 348              		.align	1
+ 349              		.global	adxl345_spi_readmb
+ 350              		.syntax unified
+ 351              		.thumb
+ 352              		.thumb_func
+ 353              		.fpu softvfp
+ 355              	adxl345_spi_readmb:
+ 356              	.LFB72:
+ 157:../driver/adxl345.c **** 
+ 158:../driver/adxl345.c **** HAL_StatusTypeDef adxl345_spi_readmb(
+ 159:../driver/adxl345.c ****     Adxl345SpiHandle *handle,
+ 160:../driver/adxl345.c ****     uint8_t addr,
+ 161:../driver/adxl345.c ****     uint16_t *data
+ 162:../driver/adxl345.c **** )
+ 163:../driver/adxl345.c **** {
+ 357              		.loc 1 163 0
+ 358              		.cfi_startproc
+ 359              		@ args = 0, pretend = 0, frame = 16
+ 360              		@ frame_needed = 0, uses_anonymous_args = 0
+ARM GAS  /tmp/ccH1FB8d.s 			page 10
+
+
+ 361              	.LVL44:
+ 362 0000 70B5     		push	{r4, r5, r6, lr}
+ 363              	.LCFI16:
+ 364              		.cfi_def_cfa_offset 16
+ 365              		.cfi_offset 4, -16
+ 366              		.cfi_offset 5, -12
+ 367              		.cfi_offset 6, -8
+ 368              		.cfi_offset 14, -4
+ 369 0002 84B0     		sub	sp, sp, #16
+ 370              	.LCFI17:
+ 371              		.cfi_def_cfa_offset 32
+ 372 0004 0446     		mov	r4, r0
+ 373 0006 1646     		mov	r6, r2
+ 374              	.LVL45:
+ 164:../driver/adxl345.c ****     HAL_StatusTypeDef status = HAL_OK;
+ 165:../driver/adxl345.c ****     uint8_t buf[2];
+ 166:../driver/adxl345.c **** 
+ 167:../driver/adxl345.c ****     /* SPI 地址要置读标志位 */
+ 168:../driver/adxl345.c ****     addr |= ADXL345_RW;
+ 375              		.loc 1 168 0
+ 376 0008 61F07F01 		orn	r1, r1, #127
+ 377              	.LVL46:
+ 378 000c 04AD     		add	r5, sp, #16
+ 379 000e 05F8091D 		strb	r1, [r5, #-9]!
+ 169:../driver/adxl345.c **** 
+ 170:../driver/adxl345.c ****     delayus(10);
+ 380              		.loc 1 170 0
+ 381 0012 0A20     		movs	r0, #10
+ 382              	.LVL47:
+ 383 0014 FFF7FEFF 		bl	delayus
+ 384              	.LVL48:
+ 171:../driver/adxl345.c ****     /* SPI 片选使能 */
+ 172:../driver/adxl345.c ****     HAL_GPIO_WritePin(handle->cs_port, handle->cs_pin, GPIO_PIN_RESET);
+ 385              		.loc 1 172 0
+ 386 0018 0022     		movs	r2, #0
+ 387 001a 218B     		ldrh	r1, [r4, #24]
+ 388 001c 6069     		ldr	r0, [r4, #20]
+ 389 001e FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 390              	.LVL49:
+ 173:../driver/adxl345.c ****     delayus(10);
+ 391              		.loc 1 173 0
+ 392 0022 0A20     		movs	r0, #10
+ 393 0024 FFF7FEFF 		bl	delayus
+ 394              	.LVL50:
+ 174:../driver/adxl345.c ****     status = HAL_SPI_Transmit(handle->hspi, &addr, 1, handle->timeout);
+ 395              		.loc 1 174 0
+ 396 0028 E369     		ldr	r3, [r4, #28]
+ 397 002a 0122     		movs	r2, #1
+ 398 002c 2946     		mov	r1, r5
+ 399 002e 2069     		ldr	r0, [r4, #16]
+ 400 0030 FFF7FEFF 		bl	HAL_SPI_Transmit
+ 401              	.LVL51:
+ 175:../driver/adxl345.c ****     if (HAL_OK == status)
+ 402              		.loc 1 175 0
+ 403 0034 0546     		mov	r5, r0
+ 404 0036 78B1     		cbz	r0, .L18
+ 405              	.LVL52:
+ARM GAS  /tmp/ccH1FB8d.s 			page 11
+
+
+ 406              	.L15:
+ 176:../driver/adxl345.c ****     {
+ 177:../driver/adxl345.c ****         status = HAL_SPI_Receive(handle->hspi, buf, 2, handle->timeout);
+ 178:../driver/adxl345.c ****     }
+ 179:../driver/adxl345.c ****     /* 取消 SPI 片选 */
+ 180:../driver/adxl345.c ****     HAL_GPIO_WritePin(handle->cs_port, handle->cs_pin, GPIO_PIN_SET);
+ 407              		.loc 1 180 0
+ 408 0038 0122     		movs	r2, #1
+ 409 003a 218B     		ldrh	r1, [r4, #24]
+ 410 003c 6069     		ldr	r0, [r4, #20]
+ 411 003e FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 412              	.LVL53:
+ 181:../driver/adxl345.c **** 
+ 182:../driver/adxl345.c ****     if (HAL_OK == status)
+ 413              		.loc 1 182 0
+ 414 0042 35B9     		cbnz	r5, .L16
+ 183:../driver/adxl345.c ****     {
+ 184:../driver/adxl345.c ****         *data = (((int16_t)buf[1] << 8) | buf[0]);
+ 415              		.loc 1 184 0
+ 416 0044 9DF80D20 		ldrb	r2, [sp, #13]	@ zero_extendqisi2
+ 417 0048 9DF80C30 		ldrb	r3, [sp, #12]	@ zero_extendqisi2
+ 418 004c 43EA0223 		orr	r3, r3, r2, lsl #8
+ 419 0050 3380     		strh	r3, [r6]	@ movhi
+ 420              	.L16:
+ 185:../driver/adxl345.c ****     }
+ 186:../driver/adxl345.c **** 
+ 187:../driver/adxl345.c ****     return status;
+ 188:../driver/adxl345.c **** }
+ 421              		.loc 1 188 0
+ 422 0052 2846     		mov	r0, r5
+ 423 0054 04B0     		add	sp, sp, #16
+ 424              	.LCFI18:
+ 425              		.cfi_remember_state
+ 426              		.cfi_def_cfa_offset 16
+ 427              		@ sp needed
+ 428 0056 70BD     		pop	{r4, r5, r6, pc}
+ 429              	.LVL54:
+ 430              	.L18:
+ 431              	.LCFI19:
+ 432              		.cfi_restore_state
+ 177:../driver/adxl345.c ****     }
+ 433              		.loc 1 177 0
+ 434 0058 E369     		ldr	r3, [r4, #28]
+ 435 005a 0222     		movs	r2, #2
+ 436 005c 03A9     		add	r1, sp, #12
+ 437 005e 2069     		ldr	r0, [r4, #16]
+ 438              	.LVL55:
+ 439 0060 FFF7FEFF 		bl	HAL_SPI_Receive
+ 440              	.LVL56:
+ 441 0064 0546     		mov	r5, r0
+ 442              	.LVL57:
+ 443 0066 E7E7     		b	.L15
+ 444              		.cfi_endproc
+ 445              	.LFE72:
+ 447              		.section	.text.adxl345_i2c_init,"ax",%progbits
+ 448              		.align	1
+ 449              		.global	adxl345_i2c_init
+ARM GAS  /tmp/ccH1FB8d.s 			page 12
+
+
+ 450              		.syntax unified
+ 451              		.thumb
+ 452              		.thumb_func
+ 453              		.fpu softvfp
+ 455              	adxl345_i2c_init:
+ 456              	.LFB65:
+  17:../driver/adxl345.c ****     handle->mode = ADXL345_I2C;
+ 457              		.loc 1 17 0
+ 458              		.cfi_startproc
+ 459              		@ args = 0, pretend = 0, frame = 0
+ 460              		@ frame_needed = 0, uses_anonymous_args = 0
+ 461              		@ link register save eliminated.
+ 462              	.LVL58:
+ 463 0000 30B4     		push	{r4, r5}
+ 464              	.LCFI20:
+ 465              		.cfi_def_cfa_offset 8
+ 466              		.cfi_offset 4, -8
+ 467              		.cfi_offset 5, -4
+  18:../driver/adxl345.c ****     /* 设置对应的读写函数指针 */
+ 468              		.loc 1 18 0
+ 469 0002 0024     		movs	r4, #0
+ 470 0004 0470     		strb	r4, [r0]
+  20:../driver/adxl345.c ****     handle->read = (HAL_StatusTypeDef (*)(void *, uint8_t, uint8_t *))adxl345_i2c_read;
+ 471              		.loc 1 20 0
+ 472 0006 064D     		ldr	r5, .L21
+ 473 0008 4560     		str	r5, [r0, #4]
+  21:../driver/adxl345.c ****     handle->readmb = (HAL_StatusTypeDef (*)(void *, uint8_t, uint16_t *))adxl345_i2c_readmb;
+ 474              		.loc 1 21 0
+ 475 000a 064D     		ldr	r5, .L21+4
+ 476 000c 8560     		str	r5, [r0, #8]
+  22:../driver/adxl345.c ****     handle->hi2c = hi2c;
+ 477              		.loc 1 22 0
+ 478 000e 064D     		ldr	r5, .L21+8
+ 479 0010 C560     		str	r5, [r0, #12]
+  23:../driver/adxl345.c ****     handle->addr = addr;
+ 480              		.loc 1 23 0
+ 481 0012 0161     		str	r1, [r0, #16]
+  24:../driver/adxl345.c ****     handle->timeout = timeout;
+ 482              		.loc 1 24 0
+ 483 0014 0275     		strb	r2, [r0, #20]
+  25:../driver/adxl345.c **** 
+ 484              		.loc 1 25 0
+ 485 0016 8361     		str	r3, [r0, #24]
+  28:../driver/adxl345.c **** 
+ 486              		.loc 1 28 0
+ 487 0018 2046     		mov	r0, r4
+ 488              	.LVL59:
+ 489 001a 30BC     		pop	{r4, r5}
+ 490              	.LCFI21:
+ 491              		.cfi_restore 5
+ 492              		.cfi_restore 4
+ 493              		.cfi_def_cfa_offset 0
+ 494 001c 7047     		bx	lr
+ 495              	.L22:
+ 496 001e 00BF     		.align	2
+ 497              	.L21:
+ 498 0020 00000000 		.word	adxl345_i2c_write
+ARM GAS  /tmp/ccH1FB8d.s 			page 13
+
+
+ 499 0024 00000000 		.word	adxl345_i2c_read
+ 500 0028 00000000 		.word	adxl345_i2c_readmb
+ 501              		.cfi_endproc
+ 502              	.LFE65:
+ 504              		.section	.text.adxl345_spi_init,"ax",%progbits
+ 505              		.align	1
+ 506              		.global	adxl345_spi_init
+ 507              		.syntax unified
+ 508              		.thumb
+ 509              		.thumb_func
+ 510              		.fpu softvfp
+ 512              	adxl345_spi_init:
+ 513              	.LFB69:
+  98:../driver/adxl345.c ****     handle->mode = ADXL345_SPI;
+ 514              		.loc 1 98 0
+ 515              		.cfi_startproc
+ 516              		@ args = 4, pretend = 0, frame = 0
+ 517              		@ frame_needed = 0, uses_anonymous_args = 0
+ 518              		@ link register save eliminated.
+ 519              	.LVL60:
+  99:../driver/adxl345.c ****     /* 设置相应读写函数指针 */
+ 520              		.loc 1 99 0
+ 521 0000 0121     		movs	r1, #1
+ 522              	.LVL61:
+ 523 0002 0170     		strb	r1, [r0]
+ 101:../driver/adxl345.c ****     handle->read = (HAL_StatusTypeDef (*)(void *, uint8_t, uint8_t *))adxl345_spi_read;
+ 524              		.loc 1 101 0
+ 525 0004 0549     		ldr	r1, .L24
+ 526 0006 4160     		str	r1, [r0, #4]
+ 102:../driver/adxl345.c ****     handle->readmb = (HAL_StatusTypeDef (*)(void *, uint8_t, uint16_t *))adxl345_spi_readmb;
+ 527              		.loc 1 102 0
+ 528 0008 0549     		ldr	r1, .L24+4
+ 529 000a 8160     		str	r1, [r0, #8]
+ 103:../driver/adxl345.c ****     handle->cs_port = cs_port;
+ 530              		.loc 1 103 0
+ 531 000c 0549     		ldr	r1, .L24+8
+ 532 000e C160     		str	r1, [r0, #12]
+ 104:../driver/adxl345.c ****     handle->cs_pin = cs_pin;
+ 533              		.loc 1 104 0
+ 534 0010 4261     		str	r2, [r0, #20]
+ 105:../driver/adxl345.c ****     handle->timeout = timeout;
+ 535              		.loc 1 105 0
+ 536 0012 0383     		strh	r3, [r0, #24]	@ movhi
+ 106:../driver/adxl345.c **** 
+ 537              		.loc 1 106 0
+ 538 0014 009B     		ldr	r3, [sp]
+ 539              	.LVL62:
+ 540 0016 C361     		str	r3, [r0, #28]
+ 109:../driver/adxl345.c **** 
+ 541              		.loc 1 109 0
+ 542 0018 0020     		movs	r0, #0
+ 543              	.LVL63:
+ 544 001a 7047     		bx	lr
+ 545              	.L25:
+ 546              		.align	2
+ 547              	.L24:
+ 548 001c 00000000 		.word	adxl345_spi_write
+ARM GAS  /tmp/ccH1FB8d.s 			page 14
+
+
+ 549 0020 00000000 		.word	adxl345_spi_read
+ 550 0024 00000000 		.word	adxl345_spi_readmb
+ 551              		.cfi_endproc
+ 552              	.LFE69:
+ 554              		.section	.text.adxl345_init,"ax",%progbits
+ 555              		.align	1
+ 556              		.global	adxl345_init
+ 557              		.syntax unified
+ 558              		.thumb
+ 559              		.thumb_func
+ 560              		.fpu softvfp
+ 562              	adxl345_init:
+ 563              	.LFB73:
+ 189:../driver/adxl345.c **** 
+ 190:../driver/adxl345.c **** HAL_StatusTypeDef adxl345_init(Adxl345Handle *handle)
+ 191:../driver/adxl345.c **** {
+ 564              		.loc 1 191 0
+ 565              		.cfi_startproc
+ 566              		@ args = 0, pretend = 0, frame = 8
+ 567              		@ frame_needed = 0, uses_anonymous_args = 0
+ 568              	.LVL64:
+ 569 0000 30B5     		push	{r4, r5, lr}
+ 570              	.LCFI22:
+ 571              		.cfi_def_cfa_offset 12
+ 572              		.cfi_offset 4, -12
+ 573              		.cfi_offset 5, -8
+ 574              		.cfi_offset 14, -4
+ 575 0002 83B0     		sub	sp, sp, #12
+ 576              	.LCFI23:
+ 577              		.cfi_def_cfa_offset 24
+ 578 0004 0546     		mov	r5, r0
+ 579              	.LVL65:
+ 192:../driver/adxl345.c ****     HAL_StatusTypeDef status = HAL_OK;
+ 193:../driver/adxl345.c ****     uint8_t devid = 0;
+ 580              		.loc 1 193 0
+ 581 0006 0023     		movs	r3, #0
+ 582 0008 8DF80730 		strb	r3, [sp, #7]
+ 583              	.LVL66:
+ 584              	.LBB2:
+ 194:../driver/adxl345.c **** 
+ 195:../driver/adxl345.c ****     for (size_t i = 0; i < 3; ++i)
+ 585              		.loc 1 195 0
+ 586 000c 1C46     		mov	r4, r3
+ 587 000e 00E0     		b	.L27
+ 588              	.LVL67:
+ 589              	.L28:
+ 590              		.loc 1 195 0 is_stmt 0 discriminator 2
+ 591 0010 0134     		adds	r4, r4, #1
+ 592              	.LVL68:
+ 593              	.L27:
+ 594              		.loc 1 195 0 discriminator 1
+ 595 0012 022C     		cmp	r4, #2
+ 596 0014 0CD8     		bhi	.L29
+ 196:../driver/adxl345.c ****     {
+ 197:../driver/adxl345.c ****         status = (*handle->read)(handle, ADXL345_DEVID, &devid);
+ 597              		.loc 1 197 0 is_stmt 1
+ 598 0016 AB68     		ldr	r3, [r5, #8]
+ARM GAS  /tmp/ccH1FB8d.s 			page 15
+
+
+ 599              	.LVL69:
+ 600 0018 0DF10702 		add	r2, sp, #7
+ 601 001c 0021     		movs	r1, #0
+ 602 001e 2846     		mov	r0, r5
+ 603 0020 9847     		blx	r3
+ 604              	.LVL70:
+ 198:../driver/adxl345.c ****         if ((HAL_OK == status) && (ADXL345_DEVICE_ID == devid))
+ 605              		.loc 1 198 0
+ 606 0022 0346     		mov	r3, r0
+ 607 0024 0028     		cmp	r0, #0
+ 608 0026 F3D1     		bne	.L28
+ 609              		.loc 1 198 0 is_stmt 0 discriminator 1
+ 610 0028 9DF80720 		ldrb	r2, [sp, #7]	@ zero_extendqisi2
+ 611 002c E52A     		cmp	r2, #229
+ 612 002e EFD1     		bne	.L28
+ 613              	.LVL71:
+ 614              	.L29:
+ 615              	.LBE2:
+ 199:../driver/adxl345.c ****         {
+ 200:../driver/adxl345.c ****             break;
+ 201:../driver/adxl345.c ****         }
+ 202:../driver/adxl345.c ****     }
+ 203:../driver/adxl345.c **** 
+ 204:../driver/adxl345.c ****     if (status != HAL_OK)
+ 616              		.loc 1 204 0 is_stmt 1
+ 617 0030 23B9     		cbnz	r3, .L31
+ 205:../driver/adxl345.c ****     {
+ 206:../driver/adxl345.c ****         return status;
+ 207:../driver/adxl345.c ****     }
+ 208:../driver/adxl345.c ****     if (devid != ADXL345_DEVICE_ID)
+ 618              		.loc 1 208 0
+ 619 0032 9DF80730 		ldrb	r3, [sp, #7]	@ zero_extendqisi2
+ 620              	.LVL72:
+ 621 0036 E52B     		cmp	r3, #229
+ 622 0038 03D0     		beq	.L34
+ 209:../driver/adxl345.c ****     {
+ 210:../driver/adxl345.c ****         return HAL_ERROR;
+ 623              		.loc 1 210 0
+ 624 003a 0123     		movs	r3, #1
+ 625              	.L31:
+ 211:../driver/adxl345.c ****     }
+ 212:../driver/adxl345.c **** 
+ 213:../driver/adxl345.c ****     /* 全分辨率，量程 +-16g */
+ 214:../driver/adxl345.c ****     if ((status = (*handle->write)(handle, ADXL345_DATA_FORMAT, 0x0B)) != HAL_OK)
+ 215:../driver/adxl345.c ****     {
+ 216:../driver/adxl345.c ****         return status;
+ 217:../driver/adxl345.c ****     }
+ 218:../driver/adxl345.c ****     if ((status = (*handle->write)(handle, ADXL345_OFSX, 0)) != HAL_OK)
+ 219:../driver/adxl345.c ****     {
+ 220:../driver/adxl345.c ****         return status;
+ 221:../driver/adxl345.c ****     }
+ 222:../driver/adxl345.c ****     if ((status = (*handle->write)(handle, ADXL345_OFSY, 0)) != HAL_OK)
+ 223:../driver/adxl345.c ****     {
+ 224:../driver/adxl345.c ****         return status;
+ 225:../driver/adxl345.c ****     }
+ 226:../driver/adxl345.c ****     if ((status = (*handle->write)(handle, ADXL345_OFSZ, 0)) != HAL_OK)
+ 227:../driver/adxl345.c ****     {
+ARM GAS  /tmp/ccH1FB8d.s 			page 16
+
+
+ 228:../driver/adxl345.c ****         return status;
+ 229:../driver/adxl345.c ****     }
+ 230:../driver/adxl345.c ****     if ((status = (*handle->write)(handle, ADXL345_POWER_CTL, 0x08)) != HAL_OK)
+ 231:../driver/adxl345.c ****     {
+ 232:../driver/adxl345.c ****         return status;
+ 233:../driver/adxl345.c ****     }
+ 234:../driver/adxl345.c ****     if ((status = (*handle->write)(handle, ADXL345_BW_RATE, 0x0E)) != HAL_OK)
+ 235:../driver/adxl345.c ****     {
+ 236:../driver/adxl345.c ****         return status;
+ 237:../driver/adxl345.c ****     }
+ 238:../driver/adxl345.c ****     if ((status = (*handle->write)(handle, ADXL345_INT_ENABLE, 0x00)) != HAL_OK)
+ 239:../driver/adxl345.c ****     {
+ 240:../driver/adxl345.c ****         return status;
+ 241:../driver/adxl345.c ****     }
+ 242:../driver/adxl345.c ****     if ((status = (*handle->write)(handle, ADXL345_INT_MAP, 0x00)) != HAL_OK)
+ 243:../driver/adxl345.c ****     {
+ 244:../driver/adxl345.c ****         return status;
+ 245:../driver/adxl345.c ****     }
+ 246:../driver/adxl345.c ****     if ((status = (*handle->write)(handle, ADXL345_FIFO_CTL, 0x00)) != HAL_OK)
+ 247:../driver/adxl345.c ****     {
+ 248:../driver/adxl345.c ****         return status;
+ 249:../driver/adxl345.c ****     }
+ 250:../driver/adxl345.c **** 
+ 251:../driver/adxl345.c ****     return status;
+ 252:../driver/adxl345.c **** }
+ 626              		.loc 1 252 0
+ 627 003c 1846     		mov	r0, r3
+ 628 003e 03B0     		add	sp, sp, #12
+ 629              	.LCFI24:
+ 630              		.cfi_remember_state
+ 631              		.cfi_def_cfa_offset 12
+ 632              		@ sp needed
+ 633 0040 30BD     		pop	{r4, r5, pc}
+ 634              	.LVL73:
+ 635              	.L34:
+ 636              	.LCFI25:
+ 637              		.cfi_restore_state
+ 214:../driver/adxl345.c ****     {
+ 638              		.loc 1 214 0
+ 639 0042 6B68     		ldr	r3, [r5, #4]
+ 640 0044 0B22     		movs	r2, #11
+ 641 0046 3121     		movs	r1, #49
+ 642 0048 2846     		mov	r0, r5
+ 643 004a 9847     		blx	r3
+ 644              	.LVL74:
+ 645 004c 0346     		mov	r3, r0
+ 646 004e 0028     		cmp	r0, #0
+ 647 0050 F4D1     		bne	.L31
+ 218:../driver/adxl345.c ****     {
+ 648              		.loc 1 218 0
+ 649 0052 6B68     		ldr	r3, [r5, #4]
+ 650 0054 0022     		movs	r2, #0
+ 651 0056 1E21     		movs	r1, #30
+ 652 0058 2846     		mov	r0, r5
+ 653              	.LVL75:
+ 654 005a 9847     		blx	r3
+ 655              	.LVL76:
+ARM GAS  /tmp/ccH1FB8d.s 			page 17
+
+
+ 656 005c 0346     		mov	r3, r0
+ 657 005e 0028     		cmp	r0, #0
+ 658 0060 ECD1     		bne	.L31
+ 222:../driver/adxl345.c ****     {
+ 659              		.loc 1 222 0
+ 660 0062 6B68     		ldr	r3, [r5, #4]
+ 661 0064 0022     		movs	r2, #0
+ 662 0066 1F21     		movs	r1, #31
+ 663 0068 2846     		mov	r0, r5
+ 664              	.LVL77:
+ 665 006a 9847     		blx	r3
+ 666              	.LVL78:
+ 667 006c 0346     		mov	r3, r0
+ 668 006e 0028     		cmp	r0, #0
+ 669 0070 E4D1     		bne	.L31
+ 226:../driver/adxl345.c ****     {
+ 670              		.loc 1 226 0
+ 671 0072 6B68     		ldr	r3, [r5, #4]
+ 672 0074 0022     		movs	r2, #0
+ 673 0076 2021     		movs	r1, #32
+ 674 0078 2846     		mov	r0, r5
+ 675              	.LVL79:
+ 676 007a 9847     		blx	r3
+ 677              	.LVL80:
+ 678 007c 0346     		mov	r3, r0
+ 679 007e 0028     		cmp	r0, #0
+ 680 0080 DCD1     		bne	.L31
+ 230:../driver/adxl345.c ****     {
+ 681              		.loc 1 230 0
+ 682 0082 6B68     		ldr	r3, [r5, #4]
+ 683 0084 0822     		movs	r2, #8
+ 684 0086 2D21     		movs	r1, #45
+ 685 0088 2846     		mov	r0, r5
+ 686              	.LVL81:
+ 687 008a 9847     		blx	r3
+ 688              	.LVL82:
+ 689 008c 0346     		mov	r3, r0
+ 690 008e 0028     		cmp	r0, #0
+ 691 0090 D4D1     		bne	.L31
+ 234:../driver/adxl345.c ****     {
+ 692              		.loc 1 234 0
+ 693 0092 6B68     		ldr	r3, [r5, #4]
+ 694 0094 0E22     		movs	r2, #14
+ 695 0096 2C21     		movs	r1, #44
+ 696 0098 2846     		mov	r0, r5
+ 697              	.LVL83:
+ 698 009a 9847     		blx	r3
+ 699              	.LVL84:
+ 700 009c 0346     		mov	r3, r0
+ 701 009e 0028     		cmp	r0, #0
+ 702 00a0 CCD1     		bne	.L31
+ 238:../driver/adxl345.c ****     {
+ 703              		.loc 1 238 0
+ 704 00a2 6B68     		ldr	r3, [r5, #4]
+ 705 00a4 0022     		movs	r2, #0
+ 706 00a6 2E21     		movs	r1, #46
+ 707 00a8 2846     		mov	r0, r5
+ARM GAS  /tmp/ccH1FB8d.s 			page 18
+
+
+ 708              	.LVL85:
+ 709 00aa 9847     		blx	r3
+ 710              	.LVL86:
+ 711 00ac 0346     		mov	r3, r0
+ 712 00ae 0028     		cmp	r0, #0
+ 713 00b0 C4D1     		bne	.L31
+ 242:../driver/adxl345.c ****     {
+ 714              		.loc 1 242 0
+ 715 00b2 6B68     		ldr	r3, [r5, #4]
+ 716 00b4 0022     		movs	r2, #0
+ 717 00b6 2F21     		movs	r1, #47
+ 718 00b8 2846     		mov	r0, r5
+ 719              	.LVL87:
+ 720 00ba 9847     		blx	r3
+ 721              	.LVL88:
+ 722 00bc 0346     		mov	r3, r0
+ 723 00be 0028     		cmp	r0, #0
+ 724 00c0 BCD1     		bne	.L31
+ 246:../driver/adxl345.c ****     {
+ 725              		.loc 1 246 0
+ 726 00c2 6B68     		ldr	r3, [r5, #4]
+ 727 00c4 0022     		movs	r2, #0
+ 728 00c6 3821     		movs	r1, #56
+ 729 00c8 2846     		mov	r0, r5
+ 730              	.LVL89:
+ 731 00ca 9847     		blx	r3
+ 732              	.LVL90:
+ 733 00cc 0346     		mov	r3, r0
+ 734              	.LVL91:
+ 735 00ce B5E7     		b	.L31
+ 736              		.cfi_endproc
+ 737              	.LFE73:
+ 739              		.section	.text.adxl345_get_acc,"ax",%progbits
+ 740              		.align	1
+ 741              		.global	adxl345_get_acc
+ 742              		.syntax unified
+ 743              		.thumb
+ 744              		.thumb_func
+ 745              		.fpu softvfp
+ 747              	adxl345_get_acc:
+ 748              	.LFB74:
+ 253:../driver/adxl345.c **** 
+ 254:../driver/adxl345.c **** HAL_StatusTypeDef adxl345_get_acc(
+ 255:../driver/adxl345.c ****     Adxl345Handle *handle,
+ 256:../driver/adxl345.c ****     int32_t *x,
+ 257:../driver/adxl345.c ****     int32_t *y,
+ 258:../driver/adxl345.c ****     int32_t *z
+ 259:../driver/adxl345.c **** )
+ 260:../driver/adxl345.c **** {
+ 749              		.loc 1 260 0
+ 750              		.cfi_startproc
+ 751              		@ args = 0, pretend = 0, frame = 8
+ 752              		@ frame_needed = 0, uses_anonymous_args = 0
+ 753              	.LVL92:
+ 754 0000 F0B5     		push	{r4, r5, r6, r7, lr}
+ 755              	.LCFI26:
+ 756              		.cfi_def_cfa_offset 20
+ARM GAS  /tmp/ccH1FB8d.s 			page 19
+
+
+ 757              		.cfi_offset 4, -20
+ 758              		.cfi_offset 5, -16
+ 759              		.cfi_offset 6, -12
+ 760              		.cfi_offset 7, -8
+ 761              		.cfi_offset 14, -4
+ 762 0002 83B0     		sub	sp, sp, #12
+ 763              	.LCFI27:
+ 764              		.cfi_def_cfa_offset 32
+ 765 0004 0446     		mov	r4, r0
+ 766 0006 0D46     		mov	r5, r1
+ 767 0008 1646     		mov	r6, r2
+ 768 000a 1F46     		mov	r7, r3
+ 769              	.LVL93:
+ 261:../driver/adxl345.c ****     HAL_StatusTypeDef status = HAL_OK;
+ 262:../driver/adxl345.c ****     uint16_t data = 0;
+ 770              		.loc 1 262 0
+ 771 000c 02AA     		add	r2, sp, #8
+ 772              	.LVL94:
+ 773 000e 0023     		movs	r3, #0
+ 774              	.LVL95:
+ 775 0010 22F8023D 		strh	r3, [r2, #-2]!	@ movhi
+ 263:../driver/adxl345.c **** 
+ 264:../driver/adxl345.c ****     status = (*handle->readmb)(handle, ADXL345_DATAX0, &data);
+ 776              		.loc 1 264 0
+ 777 0014 C368     		ldr	r3, [r0, #12]
+ 778 0016 3221     		movs	r1, #50
+ 779              	.LVL96:
+ 780 0018 9847     		blx	r3
+ 781              	.LVL97:
+ 265:../driver/adxl345.c ****     if (HAL_OK == status)
+ 782              		.loc 1 265 0
+ 783 001a 0346     		mov	r3, r0
+ 784 001c 10B1     		cbz	r0, .L38
+ 785              	.L36:
+ 266:../driver/adxl345.c ****     {
+ 267:../driver/adxl345.c ****         *x = (int16_t)data;
+ 268:../driver/adxl345.c ****     }
+ 269:../driver/adxl345.c ****     else
+ 270:../driver/adxl345.c ****     {
+ 271:../driver/adxl345.c ****         return status;
+ 272:../driver/adxl345.c ****     }
+ 273:../driver/adxl345.c **** 
+ 274:../driver/adxl345.c ****     status = (*handle->readmb)(handle, ADXL345_DATAY0, &data);
+ 275:../driver/adxl345.c ****     if (HAL_OK == status)
+ 276:../driver/adxl345.c ****     {
+ 277:../driver/adxl345.c ****         *y = (int16_t)data;
+ 278:../driver/adxl345.c ****     }
+ 279:../driver/adxl345.c ****     else
+ 280:../driver/adxl345.c ****     {
+ 281:../driver/adxl345.c ****         return status;
+ 282:../driver/adxl345.c ****     }
+ 283:../driver/adxl345.c **** 
+ 284:../driver/adxl345.c ****     status = (*handle->readmb)(handle, ADXL345_DATAZ0, &data);
+ 285:../driver/adxl345.c ****     if (HAL_OK == status)
+ 286:../driver/adxl345.c ****     {
+ 287:../driver/adxl345.c ****         *z = (int16_t)data;
+ 288:../driver/adxl345.c ****     }
+ARM GAS  /tmp/ccH1FB8d.s 			page 20
+
+
+ 289:../driver/adxl345.c ****     else
+ 290:../driver/adxl345.c ****     {
+ 291:../driver/adxl345.c ****         return status;
+ 292:../driver/adxl345.c ****     }
+ 293:../driver/adxl345.c **** 
+ 294:../driver/adxl345.c ****     return status;
+ 295:../driver/adxl345.c **** }
+ 786              		.loc 1 295 0
+ 787 001e 1846     		mov	r0, r3
+ 788              	.LVL98:
+ 789 0020 03B0     		add	sp, sp, #12
+ 790              	.LCFI28:
+ 791              		.cfi_remember_state
+ 792              		.cfi_def_cfa_offset 20
+ 793              		@ sp needed
+ 794 0022 F0BD     		pop	{r4, r5, r6, r7, pc}
+ 795              	.LVL99:
+ 796              	.L38:
+ 797              	.LCFI29:
+ 798              		.cfi_restore_state
+ 267:../driver/adxl345.c ****     }
+ 799              		.loc 1 267 0
+ 800 0024 02AA     		add	r2, sp, #8
+ 801 0026 32F9023D 		ldrsh	r3, [r2, #-2]!
+ 802 002a 2B60     		str	r3, [r5]
+ 274:../driver/adxl345.c ****     if (HAL_OK == status)
+ 803              		.loc 1 274 0
+ 804 002c E368     		ldr	r3, [r4, #12]
+ 805 002e 3421     		movs	r1, #52
+ 806 0030 2046     		mov	r0, r4
+ 807              	.LVL100:
+ 808 0032 9847     		blx	r3
+ 809              	.LVL101:
+ 275:../driver/adxl345.c ****     {
+ 810              		.loc 1 275 0
+ 811 0034 0346     		mov	r3, r0
+ 812 0036 0028     		cmp	r0, #0
+ 813 0038 F1D1     		bne	.L36
+ 277:../driver/adxl345.c ****     }
+ 814              		.loc 1 277 0
+ 815 003a 02AA     		add	r2, sp, #8
+ 816 003c 32F9023D 		ldrsh	r3, [r2, #-2]!
+ 817 0040 3360     		str	r3, [r6]
+ 284:../driver/adxl345.c ****     if (HAL_OK == status)
+ 818              		.loc 1 284 0
+ 819 0042 E368     		ldr	r3, [r4, #12]
+ 820 0044 3621     		movs	r1, #54
+ 821 0046 2046     		mov	r0, r4
+ 822              	.LVL102:
+ 823 0048 9847     		blx	r3
+ 824              	.LVL103:
+ 285:../driver/adxl345.c ****     {
+ 825              		.loc 1 285 0
+ 826 004a 0346     		mov	r3, r0
+ 827 004c 0028     		cmp	r0, #0
+ 828 004e E6D1     		bne	.L36
+ 287:../driver/adxl345.c ****     }
+ARM GAS  /tmp/ccH1FB8d.s 			page 21
+
+
+ 829              		.loc 1 287 0
+ 830 0050 BDF90620 		ldrsh	r2, [sp, #6]
+ 831 0054 3A60     		str	r2, [r7]
+ 294:../driver/adxl345.c **** }
+ 832              		.loc 1 294 0
+ 833 0056 E2E7     		b	.L36
+ 834              		.cfi_endproc
+ 835              	.LFE74:
+ 837              		.text
+ 838              	.Letext0:
+ 839              		.file 2 "/usr/include/newlib/machine/_default_types.h"
+ 840              		.file 3 "/usr/include/newlib/sys/_stdint.h"
+ 841              		.file 4 "Drivers/CMSIS/Include/core_cm3.h"
+ 842              		.file 5 "Drivers/CMSIS/Device/ST/STM32F1xx/Include/system_stm32f1xx.h"
+ 843              		.file 6 "Drivers/CMSIS/Device/ST/STM32F1xx/Include/stm32f103xb.h"
+ 844              		.file 7 "/usr/lib/gcc/arm-none-eabi/6.3.1/include/stddef.h"
+ 845              		.file 8 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_def.h"
+ 846              		.file 9 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_gpio.h"
+ 847              		.file 10 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_dma.h"
+ 848              		.file 11 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_i2c.h"
+ 849              		.file 12 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_spi.h"
+ 850              		.file 13 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h"
+ 851              		.file 14 "../driver/adxl345.h"
+ 852              		.file 15 "../driver/common.h"
+ARM GAS  /tmp/ccH1FB8d.s 			page 22
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 adxl345.c
+     /tmp/ccH1FB8d.s:16     .text.adxl345_i2c_write:0000000000000000 $t
+     /tmp/ccH1FB8d.s:23     .text.adxl345_i2c_write:0000000000000000 adxl345_i2c_write
+     /tmp/ccH1FB8d.s:69     .text.adxl345_i2c_read:0000000000000000 $t
+     /tmp/ccH1FB8d.s:76     .text.adxl345_i2c_read:0000000000000000 adxl345_i2c_read
+     /tmp/ccH1FB8d.s:118    .text.adxl345_i2c_readmb:0000000000000000 $t
+     /tmp/ccH1FB8d.s:125    .text.adxl345_i2c_readmb:0000000000000000 adxl345_i2c_readmb
+     /tmp/ccH1FB8d.s:183    .text.adxl345_spi_write:0000000000000000 $t
+     /tmp/ccH1FB8d.s:190    .text.adxl345_spi_write:0000000000000000 adxl345_spi_write
+     /tmp/ccH1FB8d.s:256    .text.adxl345_spi_read:0000000000000000 $t
+     /tmp/ccH1FB8d.s:263    .text.adxl345_spi_read:0000000000000000 adxl345_spi_read
+     /tmp/ccH1FB8d.s:348    .text.adxl345_spi_readmb:0000000000000000 $t
+     /tmp/ccH1FB8d.s:355    .text.adxl345_spi_readmb:0000000000000000 adxl345_spi_readmb
+     /tmp/ccH1FB8d.s:448    .text.adxl345_i2c_init:0000000000000000 $t
+     /tmp/ccH1FB8d.s:455    .text.adxl345_i2c_init:0000000000000000 adxl345_i2c_init
+     /tmp/ccH1FB8d.s:498    .text.adxl345_i2c_init:0000000000000020 $d
+     /tmp/ccH1FB8d.s:505    .text.adxl345_spi_init:0000000000000000 $t
+     /tmp/ccH1FB8d.s:512    .text.adxl345_spi_init:0000000000000000 adxl345_spi_init
+     /tmp/ccH1FB8d.s:548    .text.adxl345_spi_init:000000000000001c $d
+     /tmp/ccH1FB8d.s:555    .text.adxl345_init:0000000000000000 $t
+     /tmp/ccH1FB8d.s:562    .text.adxl345_init:0000000000000000 adxl345_init
+     /tmp/ccH1FB8d.s:740    .text.adxl345_get_acc:0000000000000000 $t
+     /tmp/ccH1FB8d.s:747    .text.adxl345_get_acc:0000000000000000 adxl345_get_acc
+                     .debug_frame:0000000000000010 $d
+
+UNDEFINED SYMBOLS
+HAL_I2C_Mem_Write
+HAL_I2C_Mem_Read
+delayus
+HAL_GPIO_WritePin
+HAL_SPI_Transmit
+HAL_SPI_Receive
