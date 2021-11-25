@@ -13,6 +13,9 @@
  */
 #define ARRAYSIZE(x)    (sizeof(x) / sizeof((x)[0]))
 
+#define MIN(a, b)   (((a) < (b)) ? (a) : (b))
+#define MAX(a, b)   (((a) > (b)) ? (a) : (b))
+
 /**
  * 延时指定微秒数.
  */
