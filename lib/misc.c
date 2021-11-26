@@ -23,16 +23,12 @@
 int counter_init(Counter *counter, uint32_t min_interval)
 {
     counter->min_interval = min_interval;
-    counter->count = 0;
-    memset((void *)counter->record, 0, sizeof(counter->record));
-    counter->prev = NULL;
-    counter->next = counter->record;
-
-    return 1;
+    return counter_reset(counter);
 }
 
-int counter_clear(Counter *counter)
+int counter_reset(Counter *counter)
 {
+    counter->count = 0;
     memset((void *)counter->record, 0, sizeof(counter->record));
     counter->prev = NULL;
     counter->next = counter->record;
@@ -68,6 +64,7 @@ int counter_get_state(
     const volatile Counter *counter,
     uint32_t *time,
     uint32_t *count,
+    int32_t *dist,
     int32_t *speed,
     int32_t *acc
 )
@@ -89,6 +86,7 @@ int counter_get_state(
 
     if (NULL == counter->prev)
     {
+        *dist = (int32_t)(counter->count * 1000);
         *speed = 0;
         *acc = 0;
         return 1;
@@ -124,6 +122,7 @@ int counter_get_state(
     if (n < 2)
     {
         /* 时间窗口内记录数不足以计算速度，认为速度和加速度为0 */
+        *dist = (int32_t)(counter->count * 1000);
         *speed = 0;
         *acc = 0;
     }
@@ -135,6 +134,7 @@ int counter_get_state(
             : counter->record[COUNTER_MAX_RECORD - 1]);
         uint32_t x2 = *counter->prev;
 
+        *dist = (int32_t)(counter->count * 1000 + (*time - x2) * 1000 / (x2 - x1));
         *speed = (int32_t)(1000 / (x2 - x1));
         *acc = 0;
     }
@@ -149,10 +149,11 @@ int counter_get_state(
             int64_t w2 = det3(sx2y, sxy, sy, sx3, sx2, sx, sx2, sx, n);
             int64_t w1 = det3(sx4, sx3, sx2, sx2y, sxy, sy, sx2, sx, n);
             int64_t w0 = det3(sx4, sx3, sx2, sx3, sx2, sx, sx2y, sxy, sy);
-            UNUSED(w0);
 
-            /* 根据算得得二次曲线计算当前计数、速度和加速度 */
-            *speed = (int32_t)((w2 * (*time - xbase) + w1) * 1000 / d);
+            /* 根据算得的二次曲线计算当前计数、速度和加速度 */
+            uint32_t x = *time - xbase;
+            *dist = (int32_t)(((w2 * x + w1) * x + w0) / d * 1000);
+            *speed = (int32_t)((w2 * x + w1) * 1000 / d);
             *acc = (int32_t)(w2 * 1000000 / d);
         }
         else
@@ -163,6 +164,7 @@ int counter_get_state(
                 : counter->record[COUNTER_MAX_RECORD - 1]);
             uint32_t x2 = *counter->prev;
 
+            *dist = (int32_t)(counter->count * 1000 + (*time - x2) * 1000 / (x2 - x1));
             *speed = (int32_t)(1000 / (x2 - x1));
             *acc = 0;
         }
