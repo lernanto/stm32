@@ -27,7 +27,7 @@ typedef enum
  * 设置全局日志级别.
  */
 #ifndef LOG_LEVEL
-#if _NDEBUG
+#ifdef NDEBUG
 #define LOG_LEVEL   LOG_INFO
 #else   /* NDEBUG */
 #define LOG_LEVEL   LOG_DEBUG
@@ -40,11 +40,6 @@ typedef enum
 #ifndef LOG_BUFFER_LEN
 #define LOG_BUFFER_LEN 256
 #endif  /* LOG_BUFFER_LEN */
-
-/**
- * 全局日志缓冲区，用于临时格式化日志.
- */
-// extern char g_log_buffer[];
 
 /**
  * 实际输出一条日志字符串到设备.
@@ -120,17 +115,9 @@ __STATIC_INLINE void _log_log(LogLevel level, const char *msg, ...)
     }
 }
 
-#if 0
-#define log_log(level, ...) do \
-{ \
-    if ((level) >= g_log_level) \
-    { \
-        int len = snprintf(g_log_buffer, LOG_BUFFER_LEN, __VA_ARGS__); \
-        _log_output(g_log_buffer, len); \
-    } \
-} while (0)
-#endif
-
+/*
+ * 一些简便日志接口
+ */
 #define log_log(level, msg, ...)    _log_log((level), "%s:%s:%d: " msg, __FILE__, __FUNCTION__, __LINE__ __VA_OPT__(,) __VA_ARGS__)
 
 #define log_verbose(...)    log_log(LOG_VERBOSE, __VA_ARGS__)
