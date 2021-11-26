@@ -29,6 +29,7 @@
 #include "usbd_cdc_if.h"
 
 #include "hcsr04.h"
+#include "log.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -102,8 +103,7 @@ int main(void)
 	100
   ))
   {
-    snprintf(strbuf, ARRAYSIZE(strbuf), "init HC-SR04 error!");
-    CDC_Transmit_FS((uint8_t*)strbuf, strlen(strbuf));
+    log_error("init HC-SR04 error!");
   }
   /* USER CODE END 2 */
 
@@ -117,8 +117,7 @@ int main(void)
     dist = hcsr04_get_dist(&hcsr04);
     if (dist != HCSR04_INVALID_DISTANCE)
     {
-      snprintf(strbuf, ARRAYSIZE(strbuf), "d = %ld", dist);
-      CDC_Transmit_FS((uint8_t*)strbuf, strlen(strbuf));
+      log_info("d = %ld", dist);
     }
 
     HAL_Delay(10);
