@@ -54,12 +54,13 @@ static __INLINE uint32_t counter_read(const volatile Counter *counter)
  * 根据计数记录计算码盘实时计数、转速及加速度.
  * 
  * 使用二次曲线拟合测速时间窗口内的记录，再根据拟合的参数计算速度和加速度。
- * 返回速度单位为格/秒，加速度单位为0.001格/秒。
+ * 返回距离单位为0.001格，速度单位为格/秒，加速度单位为0.001格/秒平方。
  */
 extern int counter_get_state(
     const volatile Counter *counter,
     uint32_t *time,
     uint32_t *count,
+    int32_t *dist,
     int32_t *speed,
     int32_t *acc
 );
