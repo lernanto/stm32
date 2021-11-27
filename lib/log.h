@@ -7,7 +7,12 @@
 
 #include <stdint.h>
 #include <stdarg.h>
+#include <string.h>
 #include <stdio.h>
+
+#include "stm32f1xx_hal.h"
+
+#include "util.h"
 
 
 /**
@@ -20,7 +25,6 @@ typedef enum
     LOG_INFO,
     LOG_WARN,
     LOG_ERROR,
-    LOG_FATAL,
 } LogLevel;
 
 /**
@@ -34,6 +38,14 @@ typedef enum
 #endif  /* NDEBUG */
 #endif  /* LOG_LEVEL */
 
+#ifndef LOG_SOURCE
+#if LOG_LEVEL <= LOG_DEBUG
+#define LOG_SOURCE 1
+#else
+#define LOG_SOURCE 0
+#endif  /* LOG_LEVEL <= LOG_DEBUG */
+#endif  /* LOG_SOURCE */
+
 /**
  * 设置日志缓冲区大小，决定一次能处理的日志长度.
  */
@@ -42,89 +54,110 @@ typedef enum
 #endif  /* LOG_BUFFER_LEN */
 
 /**
- * 实际输出一条日志字符串到设备.
+ * 实际输出一条日志字符串到设备，实际输出日志时应重新实现此函数.
  */
-extern uint8_t CDC_Transmit_FS(uint8_t *buf, uint16_t len);
-#define _log_output(buf, len)  CDC_Transmit_FS((uint8_t*)(buf), len)
+__attribute__((weak)) size_t _log_write(const void *buf, size_t len);
+
+/**
+ * 断言失败退出，使用断言应重新实现此函数.
+ */
+__attribute__((weak, noreturn)) void _log_abort(void);
 
 /**
  * 输出一条日志，日志实际输出的设备需要配置.
  */
-__STATIC_INLINE void _log_log(LogLevel level, const char *msg, ...)
+__STATIC_INLINE int _log_log(
+    LogLevel level,
+    const char *flag,
+    int src,
+    const char *file,
+    const char *func,
+    int line,
+    const char *msg, ...
+)
 {
-    if (level >= LOG_LEVEL)
+    static char buf[LOG_BUFFER_LEN];
+    size_t len = 0;
+    int n = 0;
+
+    /* 输出预定义的头部和时间 */
+    n = snprintf(buf, sizeof(buf), "[%s] %lu ", flag, HAL_GetTick());
+    if (n < 0)
     {
-        static char buf[LOG_BUFFER_LEN];
-        int len = 0;
-        int n;
-        char flag;
-
-        switch (level)
-        {
-        case LOG_VERBOSE:
-            flag = 'V';
-            break;
-        case LOG_DEBUG:
-            flag = 'D';
-            break;
-        case LOG_INFO:
-            flag = 'I';
-            break;
-        case LOG_ERROR:
-            flag = 'E';
-            break;
-        case LOG_FATAL:
-            flag = 'F';
-            break;
-        default:
-            flag = ' ';
-            break;
-        }
-
-        n = snprintf(buf, LOG_BUFFER_LEN, "[%c] ", flag);
-        if ((n >= 0) && (n < LOG_BUFFER_LEN))
-        {
-            len = n;
-        }
-        else
-        {
-            return;
-        }
-
-        va_list args;
-        va_start(args, msg);
-        n = vsnprintf(buf + len, LOG_BUFFER_LEN - len, msg, args);
-        va_end(args);
-
-        if (n >= 0)
-        {
-            len += n;
-        }
-        else
-        {
-            return;
-        }
-
-        if (len < LOG_BUFFER_LEN)
-        {
-            buf[len] = '\n';
-            ++len;
-        }
-
-        _log_output(buf, len);
+        return n;
     }
+    len = (size_t)n;
+    if (len >= sizeof(buf))
+    {
+        return (int)_log_write(buf, len);
+    }
+
+    if (src)
+    {
+        /* 输出源代码信息便于调试 */
+        n = snprintf(buf + len, sizeof(buf) - len, "%s:%s:%d: ", file, func, line);
+        if (n < 0)
+        {
+            return n;
+        }
+        len += n;
+        if (len >= sizeof(buf))
+        {
+            return (int)_log_write(buf, len);
+        }
+    }
+
+    va_list args;
+    va_start(args, msg);
+    n = vsnprintf(buf + len, sizeof(buf) - len, msg, args);
+    va_end(args);
+
+    if (n < 0)
+    {
+        return n;
+    }
+    len += n;
+    if (len < sizeof(buf))
+    {
+        buf[len] = '\n';
+        ++len;
+    }
+
+    return (int)_log_write(buf, len);
 }
+
+/**
+ * 输出日志的基本接口.
+ */
+#define log_log(level, flag, src, msg, ...) \
+do { if ((level) >= LOG_LEVEL) \
+    _log_log((level), (flag), (src), __FILE__, __FUNCTION__, __LINE__, \
+        msg __VA_OPT__(,) __VA_ARGS__); \
+} while (0)
 
 /*
  * 一些简便日志接口
  */
-#define log_log(level, msg, ...)    _log_log((level), "%s:%s:%d: " msg, __FILE__, __FUNCTION__, __LINE__ __VA_OPT__(,) __VA_ARGS__)
+#define log_verbose(...)    log_log(LOG_VERBOSE, "V", (LOG_SOURCE), __VA_ARGS__)
+#define log_debug(...)      log_log(LOG_DEBUG, "D", (LOG_SOURCE),  __VA_ARGS__)
+#define log_info(...)       log_log(LOG_INFO, "I", (LOG_SOURCE),  __VA_ARGS__)
+#define log_warn(...)       log_log(LOG_WARN, "W", (LOG_SOURCE),  __VA_ARGS__)
+#define log_error(...)      log_log(LOG_ERROR, "E", (LOG_SOURCE),  __VA_ARGS__)
 
-#define log_verbose(...)    log_log(LOG_VERBOSE, __VA_ARGS__)
-#define log_debug(...)      log_log(LOG_DEBUG, __VA_ARGS__)
-#define log_info(...)       log_log(LOG_INFO, __VA_ARGS__)
-#define log_warn(...)       log_log(LOG_WARN, __VA_ARGS__)
-#define log_error(...)      log_log(LOG_ERROR, __VA_ARGS__)
-#define log_fatal(...)      log_log(LOG_FATAL, __VA_ARGS__)
+#ifdef NDEBUG
+#define log_assert(con)
+#else
+/**
+ * 断言，当条件不满足时输出错误并退出.
+ */
+#define log_assert(con) \
+do { \
+    if (!(con)) \
+    { \
+        log_log(LOG_ERROR, "E", 1, "assertion failed: " #con); \
+        _log_abort(); \
+    } \
+} while (0)
+#endif  /* NDEBUG */
 
 #endif  /* _LOG_H */
