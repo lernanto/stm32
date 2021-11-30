@@ -62,6 +62,7 @@ void Error_Handler(void);
 #define HCSR04_TRIG_GPIO_Port GPIOA
 #define HCSR04_ECHO_Pin GPIO_PIN_5
 #define HCSR04_ECHO_GPIO_Port GPIOA
+#define HCSR04_ECHO_EXTI_IRQn EXTI9_5_IRQn
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */

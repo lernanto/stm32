@@ -100,7 +100,7 @@ int main(void)
     HCSR04_TRIG_Pin,
     HCSR04_ECHO_GPIO_Port,
     HCSR04_ECHO_Pin,
-	100
+	1000
   ))
   {
     log_error("init HC-SR04 error!");
