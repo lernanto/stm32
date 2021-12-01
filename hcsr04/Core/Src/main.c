@@ -28,6 +28,7 @@
 
 #include "usbd_cdc_if.h"
 
+#include "log.h"
 #include "hcsr04.h"
 /* USER CODE END Includes */
 
@@ -48,7 +49,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+static Hcsr04Control hcsr04;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -69,7 +70,6 @@ void SystemClock_Config(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  static Hcsr04Control hcsr04;
   uint32_t dist = 0;
   /* USER CODE END 1 */
 
@@ -99,11 +99,11 @@ int main(void)
     HCSR04_TRIG_Pin,
     HCSR04_ECHO_GPIO_Port,
     HCSR04_ECHO_Pin,
-	100
+	100,
+	0
   ))
   {
-    snprintf(strbuf, ARRAYSIZE(strbuf), "init HC-SR04 error!");
-    CDC_Transmit_FS((uint8_t*)strbuf, strlen(strbuf));
+    log_error("init HC-SR04 error!");
   }
   /* USER CODE END 2 */
 
@@ -117,8 +117,7 @@ int main(void)
     dist = hcsr04_get_dist(&hcsr04);
     if (dist != HCSR04_INVALID_DISTANCE)
     {
-      snprintf(strbuf, ARRAYSIZE(strbuf), "d = %ld", dist);
-      CDC_Transmit_FS((uint8_t*)strbuf, strlen(strbuf));
+      log_info("d = %ld", dist);
     }
 
     HAL_Delay(10);
@@ -172,7 +171,20 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  if (HCSR04_ECHO_Pin == GPIO_Pin)
+  {
+	if (HCSR04_ECHO_BEGIN == hcsr04.state)
+	{
+	  hcsr04_echo_end(&hcsr04);
+	}
+	else
+	{
+	  hcsr04_echo_begin(&hcsr04);
+	}
+  }
+}
 /* USER CODE END 4 */
 
 /**
