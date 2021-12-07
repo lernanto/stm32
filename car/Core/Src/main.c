@@ -27,6 +27,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <math.h>
+
 #include "usbd_cdc_if.h"
 
 #include "util.h"
@@ -39,15 +41,24 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+typedef struct
+{
+  uint32_t time;
+  uint32_t distance;
+} Hcsr04Record;
 
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define HCSR04_MAX_RECORD   10
+#define HCSR04_EXPIRE_TIME  100
+
 #define MOTOR_LEFT 0
 #define MOTOR_RIGHT 1
 
-#define COUNTER_MIN_INTERVAL	13
+#define COUNTER_MIN_INTERVAL  13
+#define COUNTER_SCALE (65 * M_PI / 20)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -59,8 +70,10 @@
 /* USER CODE BEGIN PV */
 static __IO uint32_t g_timerMs = 0;
 static __IO char g_run = 0;
-static char g_strBuf[256];
 static Hcsr04Control g_hcsr04;
+static Hcsr04Record g_hcsr04_records[HCSR04_MAX_RECORD + 1];
+static Hcsr04Record *g_hcsr04_record_begin = g_hcsr04_records;
+static Hcsr04Record *g_hcsr04_record_end = g_hcsr04_records;
 static Counter g_counter_left;
 static Counter g_counter_right;
 /* USER CODE END PV */
@@ -73,68 +86,66 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-static uint32_t HCSR04_GetDistance(Hcsr04Control *hcsr04)
+static uint32_t hcsr04_get_distance(Hcsr04Control *hcsr04, double l2)
 {
-  static uint32_t distances[] = {0, 0, 0, 0, 0};
-  static size_t current = UINT32_MAX;
-  size_t minIdx = 0;
-  size_t maxIdx = 0;
-  size_t count = 0;
-  uint32_t sum = 0;
+  uint32_t now = HAL_GetTick();
+  Hcsr04Record *p = NULL;
+  size_t n = 0;
+  double x = 0;
+  double y = 0;
+  double x2 = 0;
+  double xy = 0;
+  double det = 0;
+  double w = 0;
+  double b = 0;
 
-  if (current >= ARRAYSIZE(distances))
+  while (
+    (g_hcsr04_record_begin->time + HCSR04_EXPIRE_TIME < now)
+    && (g_hcsr04_record_begin != g_hcsr04_record_end)
+  )
   {
-    for (size_t i = 0; i < ARRAYSIZE(distances); ++i)
-    {
-      distances[i] = hcsr04_get_dist_async(hcsr04);
-    }
-    current = 0;
+    circular_inc(g_hcsr04_records, ARRAYSIZE(g_hcsr04_records), g_hcsr04_record_begin);
+  }
+
+  if (circular_size(
+    g_hcsr04_record_begin,
+    g_hcsr04_record_end,
+    ARRAYSIZE(g_hcsr04_records)
+  ) == 0)
+  {
+    return HCSR04_INVALID_DISTANCE;
+  }
+
+  /* 线性回归求当前距离，迭代求解 */
+  for (
+    p = g_hcsr04_record_begin, n = 1, x = 0, y = 0, x2 = 0, xy = 0;
+    p != g_hcsr04_record_end;
+    circular_inc(g_hcsr04_records, ARRAYSIZE(g_hcsr04_records), p), ++n
+  )
+  {
+    double a = 1.0 / n;
+    x = (1 - a) * x + a * p->time;
+    y = (1 - a) * y + a * p->distance;
+    x2 = (1 - a) * x2 + a * p->time * p->time;
+    xy = (1 - a) * xy + a * p->time * p->distance;
+  }
+
+  det = (x2 + l2) * (1 + l2) - x * x;
+  /* TODO: 判断实数不为零 */
+  if (det != 0)
+  {
+    /* 矩阵满秩，线性方程有特解 */
+    w = (xy * (1 + l2) - x * y) / det;
+    b = (y - w * x) / (1 + l2);
   }
   else
   {
-    distances[current] = hcsr04_get_dist_sync(hcsr04);
-    if (++current >= ARRAYSIZE(distances))
-    {
-      current = 0;
-    }
+    /* 方程有无穷多解，退化为求均值 */
+    w = 0;
+    b = y / (1 + l2);
   }
 
-  minIdx = 0;
-  maxIdx = 0;
-  for (size_t i = 0; i < ARRAYSIZE(distances); ++i)
-  {
-    if (distances[i] < distances[minIdx])
-    {
-      minIdx = i;
-    }
-    else
-    {
-      if (distances[i] > distances[maxIdx])
-      {
-        maxIdx = i;
-      }
-    }
-  }
-
-  count = 0;
-  sum = 0;
-  for (size_t i = 0; i < ARRAYSIZE(distances); ++i)
-  {
-    if ((i != minIdx) && (i != maxIdx) && (distances[i] != HCSR04_INVALID_DISTANCE))
-    {
-      ++count;
-      sum += distances[i];
-    }
-  }
-
-  if (count >= 3)
-  {
-	return sum / count;
-  }
-  else
-  {
-	return HCSR04_INVALID_DISTANCE;
-  }
+  return (uint32_t)(w * now + b);
 }
 /* USER CODE END 0 */
 
@@ -159,12 +170,18 @@ int main(void)
   int32_t z = 0;
   uint32_t left_count = 0;
   uint32_t right_count = 0;
+  int32_t left_dist = 0;
+  int32_t right_dist = 0;
   int32_t left_speed = 0;
   int32_t right_speed = 0;
   int32_t left_acc = 0;
   int32_t right_acc = 0;
+  int dir = 0;
+  int old_dir = 0;
   int32_t left_pulse = 0;
   int32_t right_pulse = 0;
+  double speed = 0;
+  double acc = 0;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -187,7 +204,6 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_TIM2_Init();
-  MX_TIM3_Init();
   MX_I2C1_Init();
   MX_SPI1_Init();
   MX_USB_DEVICE_Init();
@@ -205,6 +221,8 @@ int main(void)
   status = adxl345_init(padxl345);
   status = l298n_init(&l298n_left, &htim2, TIM_CHANNEL_2, TIM_CHANNEL_1);
   status = l298n_init(&l298n_right, &htim2, TIM_CHANNEL_3, TIM_CHANNEL_4);
+  status = l298n_start(&l298n_left);
+  status = l298n_start(&l298n_right);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -212,66 +230,114 @@ int main(void)
 
   while (1)
   {
-	/*
-	if (!g_run)
-	{
-	  continue;
-	}
-	*/
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    uint32_t max_speed = l298n_get_max_speed(&l298n_left);
+    ir_front = (HAL_GPIO_ReadPin(IR_FRONT_GPIO_Port, IR_FRONT_Pin) == GPIO_PIN_RESET);
+    status = hcsr04_trigger(&g_hcsr04);
+    distance = hcsr04_get_distance(&g_hcsr04, 0);
+    status = adxl345_get_acc(padxl345, &x, &y, &z);
+    counter_get_state(&g_counter_left, &time, &left_count, &left_dist, &left_speed, &left_acc);
+    counter_get_state(&g_counter_right, &time, &right_count, &right_dist, &right_speed, &right_acc);
 
-	ir_front = (HAL_GPIO_ReadPin(IR_FRONT_GPIO_Port, IR_FRONT_Pin) == GPIO_PIN_RESET);
-	distance = HCSR04_GetDistance(&g_hcsr04);
-	status = adxl345_get_acc(padxl345, &x, &y, &z);
-	counter_get_state(&g_counter_left, &time, &left_count, &left_speed, &left_acc);
-	counter_get_state(&g_counter_right, &time, &right_count, &right_speed, &right_acc);
+    if ((HCSR04_INVALID_DISTANCE == distance) || (distance > 2000))
+    {
+      l298n_stop(&l298n_left);
+      l298n_stop(&l298n_right);
+    }
+    else 
+    {
+      double d = 200.0 - distance;
+      double sl = ((dir >= 0) ? left_dist : -left_dist) * COUNTER_SCALE;
+      double sr = ((dir >= 0) ? right_dist : -right_dist) * COUNTER_SCALE;
+      double s = (sl + sr) / 2;
+      double vl = ((dir >= 0) ? left_speed : -left_speed) * COUNTER_SCALE;
+      double vr = ((dir >= 0) ? right_speed : -right_speed) * COUNTER_SCALE;
+      double v = (vl + vr) / 2;
+      double al = ((dir >= 0) ? left_acc : -left_acc) * COUNTER_SCALE / 1000;
+      double ar = ((dir >= 0) ? right_acc : -right_acc) * COUNTER_SCALE / 1000;
+      double dsl = sl - s;
+      double dsr = sr - s;
+      double dvl = vl - v;
+      double dvr = vr - v;
 
-    if ((HCSR04_INVALID_DISTANCE == distance) || (distance > 1500)
-		|| ((distance > 400) && (distance < 600)))
-    {
-      left_pulse = right_pulse = 0;
-    }
-    else if (distance < 500)
-    {
-      left_pulse = right_pulse = MIN(((int32_t)distance - 500) * 2, -200);
-    }
-    else
-    {
-      left_pulse = right_pulse = MAX((distance - 500) * 2, 200);
-    }
+      double dest_a = MIN(MAX(-(d + v), -10), 10);
+      double dest_al = dest_a - (dsl + dvl);
+      double dest_ar = dest_a - (dsr + dvr);
 
-    if (ir_front)
-    {
-    	left_pulse = MIN(left_pulse, 0);
-    	right_pulse = MIN(right_pulse, 0);
+      old_dir = dir;
+      if (dest_a >= 0)
+      {
+        dir = 1;
+        dest_al = MAX(dest_al, 0);
+        dest_ar = MAX(dest_ar, 0);
+      }
+      else
+      {
+        dir = -1;
+        dest_al = MIN(dest_al, 0);
+        dest_ar = MIN(dest_ar, 0);
+      }
+
+      if (dir != old_dir)
+      {
+        /* 转向 */
+        left_pulse = 0;
+        right_pulse = 0;
+        l298n_stop(&l298n_left);
+        l298n_stop(&l298n_right);
+        counter_reset(&g_counter_left);
+        counter_reset(&g_counter_right);
+      }
+      else
+      {
+        if (al < dest_al)
+        {
+          left_pulse = MIN(left_pulse + 1, max_speed);
+        }
+        else if (al > dest_al)
+        {
+          left_pulse = MAX(left_pulse - 1, -max_speed);
+        }
+
+        if (ar < dest_ar)
+        {
+          right_pulse = MIN(right_pulse + 1, max_speed);
+        }
+        else if (ar > dest_ar)
+        {
+          right_pulse = MAX(right_pulse - 1, -max_speed);
+        }
+      }
+
+      log_debug(
+        "d = %f, sl = %f, sr = %f, vl = %f, vr = %f, al = %f, ar = %f, dest_al = %f, dest_ar = %f, left_pulse = %d, right_pulse = %d",
+        d,
+        sl,
+        sr,
+        vl,
+        vr,
+        al,
+        ar,
+        dest_al,
+        dest_ar,
+        left_pulse,
+        right_pulse
+      );
     }
 
     HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, ((left_pulse != 0) || (right_pulse != 0)) ? GPIO_PIN_RESET : GPIO_PIN_SET);
     l298n_set_speed(&l298n_left, left_pulse);
     l298n_set_speed(&l298n_right, right_pulse);
-
-    snprintf(
-      g_strBuf,
-	  ARRAYSIZE(g_strBuf),
-	  "%lu,%lu,%lu,%ld,%ld,%ld,%lu,%lu,%ld,%ld,%ld,%ld,%ld,%ld\n",
-	  time,
-	  ir_front,
-	  distance,
-	  x,
-	  y,
-	  z,
-	  left_count,
-	  right_count,
-	  left_speed,
-	  right_speed,
-	  left_acc,
-	  right_acc,
-	  left_pulse,
-	  right_pulse
-	);
-    CDC_Transmit_FS((uint8_t*)g_strBuf, strlen(g_strBuf));
+    if (l298n_get_state(&l298n_left) == L298N_STOP)
+    {
+      l298n_start(&l298n_left);
+    }
+    if (l298n_get_state(&l298n_right) == L298N_STOP)
+    {
+      l298n_start(&l298n_right);
+    }
 
     HAL_Delay(10);
   }
@@ -332,23 +398,36 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
     break;
 
   case HCSR04_ECHO_Pin:
-	if (GPIO_PIN_RESET == HAL_GPIO_ReadPin(g_hcsr04.echo_port, g_hcsr04.echo_pin))
-	{
+    if (GPIO_PIN_RESET == HAL_GPIO_ReadPin(g_hcsr04.echo_port, g_hcsr04.echo_pin))
+    {
+      uint32_t dist = HCSR04_INVALID_DISTANCE;
       log_assert(HCSR04_ECHO_BEGIN == g_hcsr04.state);
-	  hcsr04_echo_end(&g_hcsr04);
-	}
-	else {
-	  hcsr04_echo_begin(&g_hcsr04);
-	}
-	break;
+      hcsr04_echo_end(&g_hcsr04);
+
+      if ((dist = hcsr04_read_nowait(&g_hcsr04)) != HCSR04_INVALID_DISTANCE)
+      {
+        g_hcsr04_record_end->time = g_hcsr04.echo_end_ms;
+        g_hcsr04_record_end->distance = dist;
+        circular_push(
+          g_hcsr04_records,
+          ARRAYSIZE(g_hcsr04_records),
+          g_hcsr04_record_begin,
+          g_hcsr04_record_end
+        );
+      }
+    }
+    else {
+      hcsr04_echo_begin(&g_hcsr04);
+    }
+    break;
 
   case COUNTER_LEFT_Pin:
-	counter_inc(&g_counter_left);
-	break;
+    counter_inc(&g_counter_left);
+    break;
 
   case COUNTER_RIGHT_Pin:
-	counter_inc(&g_counter_right);
-	break;
+    counter_inc(&g_counter_right);
+    break;
 
   default:
     break;
