@@ -64,6 +64,7 @@ void Error_Handler(void);
 #define HCSR04_TRIG_GPIO_Port GPIOC
 #define HCSR04_ECHO_Pin GPIO_PIN_15
 #define HCSR04_ECHO_GPIO_Port GPIOC
+#define HCSR04_ECHO_EXTI_IRQn EXTI15_10_IRQn
 #define SW18015P_Pin GPIO_PIN_0
 #define SW18015P_GPIO_Port GPIOA
 #define LED_Pin GPIO_PIN_1

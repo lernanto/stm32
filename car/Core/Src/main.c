@@ -27,6 +27,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <math.h>
+
 #include "usbd_cdc_if.h"
 
 #include "util.h"
@@ -39,6 +41,11 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+typedef struct
+{
+  uint32_t time;
+  uint32_t distance;
+} Hcsr04Record;
 
 /* USER CODE END PTD */
 
@@ -48,6 +55,7 @@
 #define MOTOR_RIGHT 1
 
 #define COUNTER_MIN_INTERVAL	13
+#define COUNTER_SCALE (60 * M_PI / 20)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -59,7 +67,6 @@
 /* USER CODE BEGIN PV */
 static __IO uint32_t g_timerMs = 0;
 static __IO char g_run = 0;
-static char g_strBuf[256];
 static Hcsr04Control g_hcsr04;
 static Counter g_counter_left;
 static Counter g_counter_right;
@@ -73,68 +80,99 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-static uint32_t HCSR04_GetDistance(Hcsr04Control *hcsr04)
+static uint32_t hcsr04_get_distance(Hcsr04Control *hcsr04)
 {
-  static uint32_t distances[] = {0, 0, 0, 0, 0};
-  static size_t current = UINT32_MAX;
-  size_t minIdx = 0;
-  size_t maxIdx = 0;
-  size_t count = 0;
-  uint32_t sum = 0;
+  static Hcsr04Record records[10];
+  static Hcsr04Record *begin = records;
+  static Hcsr04Record *end = records;
+  Hcsr04Record *p = NULL;
+  uint32_t now = 0;
+  int count = 0;
+  double sx = 0;
+  double sy = 0;
+  double sdx2 = 0;
+  double sdxdy = 0;
+  double w = 0;
+  double b = 0;
 
-  if (current >= ARRAYSIZE(distances))
+  uint32_t dist = hcsr04_get_dist_async(hcsr04);
+  if (dist != HCSR04_INVALID_DISTANCE)
   {
-    for (size_t i = 0; i < ARRAYSIZE(distances); ++i)
+    now = HAL_GetTick();
+    end->time = now;
+    end->distance = dist;
+    if (++end >= records + ARRAYSIZE(records))
     {
-      distances[i] = hcsr04_get_dist_async(hcsr04);
-    }
-    current = 0;
-  }
-  else
-  {
-    distances[current] = hcsr04_get_dist_sync(hcsr04);
-    if (++current >= ARRAYSIZE(distances))
-    {
-      current = 0;
+      end = records;
     }
   }
 
-  minIdx = 0;
-  maxIdx = 0;
-  for (size_t i = 0; i < ARRAYSIZE(distances); ++i)
+  while ((begin->time + 100 < now) && (begin != end))
   {
-    if (distances[i] < distances[minIdx])
+    if (++begin >= records + ARRAYSIZE(records))
     {
-      minIdx = i;
+      begin = records;
     }
-    else
+  }
+
+  if (begin == end)
+  {
+    return HCSR04_INVALID_DISTANCE;
+  }
+
+  count = end - begin;
+  if (count < 0)
+  {
+    count += ARRAYSIZE(records);
+  }
+
+  if (count < 3)
+  {
+    sy = 0;
+    p = begin;
+    while (p != end)
     {
-      if (distances[i] > distances[maxIdx])
+      sy += p->distance;
+      if (++p >= records + ARRAYSIZE(records))
       {
-        maxIdx = i;
+        p = records;
       }
     }
+
+    return (uint32_t)(sy / count);
   }
 
-  count = 0;
-  sum = 0;
-  for (size_t i = 0; i < ARRAYSIZE(distances); ++i)
+  sx = 0;
+  sy = 0;
+  p = begin;
+  while (p != end)
   {
-    if ((i != minIdx) && (i != maxIdx) && (distances[i] != HCSR04_INVALID_DISTANCE))
+    sx += p->time;
+    sy += p->distance;
+    if (++p >= records + ARRAYSIZE(records))
     {
-      ++count;
-      sum += distances[i];
+      p = records;
+    }
+  }
+  sx /= count;
+  sy /= count;
+
+  sdx2 = 0;
+  sdxdy = 0;
+  p = begin;
+  while (p != end)
+  {
+    sdx2 += (p->time - sx) * (p->time - sx);
+    sdxdy += (p->time - sx) * (p->distance - sy);
+    if (++p >= records + ARRAYSIZE(records))
+    {
+      p = records;
     }
   }
 
-  if (count >= 3)
-  {
-	return sum / count;
-  }
-  else
-  {
-	return HCSR04_INVALID_DISTANCE;
-  }
+  w = sdxdy / sdx2;
+  b = sy - w * sx;
+  return (uint32_t)(w * HAL_GetTick() + b);
 }
 /* USER CODE END 0 */
 
@@ -165,6 +203,8 @@ int main(void)
   int32_t right_acc = 0;
   int32_t left_pulse = 0;
   int32_t right_pulse = 0;
+  double speed = 0;
+  double acc = 0;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -212,66 +252,75 @@ int main(void)
 
   while (1)
   {
-	/*
-	if (!g_run)
-	{
-	  continue;
-	}
-	*/
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
 
 	ir_front = (HAL_GPIO_ReadPin(IR_FRONT_GPIO_Port, IR_FRONT_Pin) == GPIO_PIN_RESET);
-	distance = HCSR04_GetDistance(&g_hcsr04);
+	distance = hcsr04_get_distance(&g_hcsr04);
 	status = adxl345_get_acc(padxl345, &x, &y, &z);
 	counter_get_state(&g_counter_left, &time, &left_count, &left_speed, &left_acc);
 	counter_get_state(&g_counter_right, &time, &right_count, &right_speed, &right_acc);
 
-    if ((HCSR04_INVALID_DISTANCE == distance) || (distance > 1500)
-		|| ((distance > 400) && (distance < 600)))
+    if ((HCSR04_INVALID_DISTANCE == distance) || (distance > 2000))
     {
-      left_pulse = right_pulse = 0;
+      /* TODO: do nothing */
     }
-    else if (distance < 500)
+    else 
     {
-      left_pulse = right_pulse = MIN(((int32_t)distance - 500) * 2, -200);
-    }
-    else
-    {
-      left_pulse = right_pulse = MAX((distance - 500) * 2, 200);
-    }
+      double d = 20.0 - distance;
+      double sl = ((left_pulse > 0) ? left_count : -left_count) * COUNTER_SCALE;
+      double sr = ((right_pulse > 0) ? right_count : -right_count) * COUNTER_SCALE;
+      double s = (sl + sr) / 2;
+      double vl = ((left_pulse > 0) ? left_speed : -left_speed) * COUNTER_SCALE;
+      double vr = ((right_pulse > 0) ? right_speed : -right_speed) * COUNTER_SCALE;
+      double v = (vl + vr) / 2;
+      double al = left_acc * COUNTER_SCALE / 1000;
+      double ar = right_acc * COUNTER_SCALE / 1000;
+      double dsl = sl - s;
+      double dsr = sr - s;
+      double dvl = vl - v;
+      double dvr = vr - v;
 
-    if (ir_front)
-    {
-    	left_pulse = MIN(left_pulse, 0);
-    	right_pulse = MIN(right_pulse, 0);
+      double dest_a = MIN(MAX(-(d + v), -10), 10);
+      double dest_al = dest_a - (dsl + dvl);
+      double dest_ar = dest_a - (dsr + dvr);
+
+      if (al < dest_al)
+      {
+        ++left_pulse;
+      }
+      else if (al > dest_al)
+      {
+        --left_pulse;
+      }
+
+      if (ar < dest_ar)
+      {
+        ++right_pulse;
+      }
+      else if (ar > dest_ar)
+      {
+        --right_pulse;
+      }
     }
 
     HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, ((left_pulse != 0) || (right_pulse != 0)) ? GPIO_PIN_RESET : GPIO_PIN_SET);
     l298n_set_speed(&l298n_left, left_pulse);
     l298n_set_speed(&l298n_right, right_pulse);
 
-    snprintf(
-      g_strBuf,
-	  ARRAYSIZE(g_strBuf),
-	  "%lu,%lu,%lu,%ld,%ld,%ld,%lu,%lu,%ld,%ld,%ld,%ld,%ld,%ld\n",
-	  time,
-	  ir_front,
-	  distance,
-	  x,
-	  y,
-	  z,
-	  left_count,
-	  right_count,
-	  left_speed,
-	  right_speed,
-	  left_acc,
-	  right_acc,
-	  left_pulse,
-	  right_pulse
-	);
-    CDC_Transmit_FS((uint8_t*)g_strBuf, strlen(g_strBuf));
+    log_debug(
+      "distance = %lu, left_count = %lu, right_count = %lu, left_speed = %ld, right_speed = %ld, left_acc = %ld, right_acc = %ld, left_pulse = %ld, right_pulse = %ld",
+      distance,
+      left_count,
+      right_count,
+      left_speed,
+      right_speed,
+      left_acc,
+      right_acc,
+      left_pulse,
+      right_pulse
+    );
 
     HAL_Delay(10);
   }
