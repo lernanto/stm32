@@ -19,30 +19,32 @@
 /**
  * 延时指定微秒数.
  */
-__STATIC_INLINE uint32_t delayus(uint32_t us)
+__STATIC_INLINE void delayus(uint32_t us)
 {
     uint32_t startms;
-    int32_t startval;
+    uint32_t startval;
     uint32_t endms;
-    int32_t endval;
-    uint32_t timeus;
+    uint32_t endval;
+    uint32_t clk;
 
     if (0 == us)
     {
-        return 0;
+        return;
     }
 
     startms = HAL_GetTick();
     startval = SysTick->VAL;
-
-    do
+    endms = startms + us / 1000;
+    clk = us % 1000 * (HAL_RCC_GetHCLKFreq() / 1000000);
+    if (startval < clk)
     {
-        endms = HAL_GetTick();
-        endval = SysTick->VAL;
-        timeus = (endms - startms) * 1000 + (startval - endval) / 72;
-    } while (timeus < us);
+        ++endms;
+        startval += SysTick->LOAD + 1;
+    }
+    endval = startval - clk;
 
-    return timeus;
+    while (HAL_GetTick() < endms);
+    while (SysTick->VAL > endval);
 }
 
 #endif  /* _UTIL_H */
