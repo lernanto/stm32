@@ -11,6 +11,16 @@
 
 
 /**
+ * @brief 电机状态
+ */
+typedef enum
+{
+    L298N_STOP = 0,     /**< 停止 */
+    L298N_START,        /**< 已启动 PWM，正常运转 */
+    L298N_BRAKE,        /**< 刹车 */
+} L298NState;
+
+/**
  * @brief L298N 电机驱动模块控制结构
  *
  * 通过脉冲宽度调制控制直流电机转速
@@ -57,6 +67,14 @@ extern HAL_StatusTypeDef l298n_start(L298nControl *l298n);
  * @return 状态码
  */
 extern HAL_StatusTypeDef l298n_stop(L298nControl *l298n);
+
+/**
+ * @brief 返回电机当前状态
+ *
+ * @param l298n 电机控制结构
+ * @return 状态码
+ */
+extern L298NState l298n_get_state(L298nControl *l298n);
 
 /**
  * @brief 返回电机最大脉冲宽度

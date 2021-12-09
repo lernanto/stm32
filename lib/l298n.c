@@ -102,6 +102,45 @@ HAL_StatusTypeDef l298n_stop(L298nControl *l298n)
     return stop(l298n);
 }
 
+L298NState l298n_get_state(L298nControl *l298n)
+{
+    log_assert(
+        (TIM_CHANNEL_STATE_GET(l298n->timer, l298n->channel1)
+            != HAL_TIM_CHANNEL_STATE_RESET)
+        && (TIM_CHANNEL_STATE_GET(l298n->timer, l298n->channel2)
+            != HAL_TIM_CHANNEL_STATE_RESET)
+    );
+
+    if (
+        (TIM_CHANNEL_STATE_GET(l298n->timer, l298n->channel1)
+            == HAL_TIM_CHANNEL_STATE_READY)
+        && (TIM_CHANNEL_STATE_GET(l298n->timer, l298n->channel2)
+            == HAL_TIM_CHANNEL_STATE_READY)
+    )
+    {
+        /* 正负极通道都处于停止状态，停止 */
+        return L298N_STOP;
+    }
+
+    if (
+        (TIM_CHANNEL_STATE_GET(l298n->timer, l298n->channel1)
+            == HAL_TIM_CHANNEL_STATE_BUSY)
+        && (__HAL_TIM_GET_COMPARE(l298n->timer, l298n->channel1)
+            >= get_max_pulse(l298n))
+        && (TIM_CHANNEL_STATE_GET(l298n->timer, l298n->channel2)
+            == HAL_TIM_CHANNEL_STATE_BUSY)
+        && (__HAL_TIM_GET_COMPARE(l298n->timer, l298n->channel2)
+            >= get_max_pulse(l298n))
+    )
+    {
+        /* 正负极通道都处于最大脉冲宽度，刹车 */
+        return L298N_BRAKE;
+    }
+
+    /* 否则为正常运转 */
+    return L298N_START;
+}
+
 uint32_t l298n_get_max_speed(L298nControl *l298n)
 {
     return get_max_pulse(l298n);
@@ -122,25 +161,14 @@ HAL_StatusTypeDef l298n_set_speed(L298nControl *l298n, int32_t speed)
 
     __HAL_TIM_SET_COMPARE(l298n->timer, l298n->channel1, pulse1);
     __HAL_TIM_SET_COMPARE(l298n->timer, l298n->channel2, pulse2);
-
-    if (0 == speed)
-    {
-        log_debug("speed = 0, stop PWM");
-        return stop(l298n);
-    }
-    else
-    {
-        return l298n_start(l298n);
-    }
+    return HAL_OK;
 }
 
 HAL_StatusTypeDef l298n_brake(L298nControl *l298n)
 {
-    uint32_t pulse = get_max_pulse(l298n);
-
     log_debug("brake, set both channels high");
 
-    __HAL_TIM_SET_COMPARE(l298n->timer, l298n->channel1, pulse);
-    __HAL_TIM_SET_COMPARE(l298n->timer, l298n->channel2, pulse);
+    __HAL_TIM_SET_COMPARE(l298n->timer, l298n->channel1, get_max_pulse(l298n));
+    __HAL_TIM_SET_COMPARE(l298n->timer, l298n->channel2, get_max_pulse(l298n));
     return l298n_start(l298n);
 }
