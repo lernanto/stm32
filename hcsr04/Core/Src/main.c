@@ -28,6 +28,7 @@
 
 #include "usbd_cdc_if.h"
 
+#include "log.h"
 #include "hcsr04.h"
 /* USER CODE END Includes */
 
@@ -48,7 +49,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+static Hcsr04Control g_hcsr04;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -69,7 +70,6 @@ void SystemClock_Config(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  static Hcsr04Control hcsr04;
   uint32_t dist = 0;
   /* USER CODE END 1 */
 
@@ -94,16 +94,15 @@ int main(void)
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
   if (!hcsr04_init(
-    &hcsr04,
+    &g_hcsr04,
     HCSR04_TRIG_GPIO_Port,
     HCSR04_TRIG_Pin,
     HCSR04_ECHO_GPIO_Port,
     HCSR04_ECHO_Pin,
-	100
+	0
   ))
   {
-    snprintf(strbuf, ARRAYSIZE(strbuf), "init HC-SR04 error!");
-    CDC_Transmit_FS((uint8_t*)strbuf, strlen(strbuf));
+    log_error("init HC-SR04 error!");
   }
   /* USER CODE END 2 */
 
@@ -114,14 +113,21 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    dist = hcsr04_get_dist(&hcsr04);
+	int i = 0;
+    hcsr04_trigger(&g_hcsr04);
+    dist = hcsr04_read_nowait(&g_hcsr04);
+    while ((HCSR04_INVALID_DISTANCE == dist) && (i < 10))
+    {
+      HAL_Delay(10);
+      dist = hcsr04_read_nowait(&g_hcsr04);
+      ++i;
+    }
     if (dist != HCSR04_INVALID_DISTANCE)
     {
-      snprintf(strbuf, ARRAYSIZE(strbuf), "d = %ld", dist);
-      CDC_Transmit_FS((uint8_t*)strbuf, strlen(strbuf));
+      log_info("d = %ld", dist);
     }
 
-    HAL_Delay(10);
+    HAL_Delay(100);
   }
   /* USER CODE END 3 */
 }
@@ -172,6 +178,43 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  if (HCSR04_ECHO_Pin == GPIO_Pin)
+  {
+	if (GPIO_PIN_RESET == HAL_GPIO_ReadPin(g_hcsr04.echo_port, g_hcsr04.echo_pin))
+	{
+	  log_assert(HCSR04_ECHO_BEGIN == g_hcsr04.state);
+	  hcsr04_echo_end(&g_hcsr04);
+	}
+	else
+	{
+	  hcsr04_echo_begin(&g_hcsr04);
+	}
+  }
+}
+
+size_t _log_write(const void *buf, size_t len)
+{
+	static const size_t max_retry = 10;
+
+	uint8_t result = CDC_Transmit_FS((uint8_t*)buf, (uint16_t)len);
+
+	for (size_t i = 1; (result != USBD_OK) && (i < max_retry); ++i)
+	{
+		delayus(20);
+		result = CDC_Transmit_FS((uint8_t*)buf, (uint16_t)len);
+	}
+
+	return (USBD_OK == result) ? len : 0;
+}
+
+void _log_abort(void)
+{
+  log_error("system panic! please reset.");
+  while (1);
+}
 
 /* USER CODE END 4 */
 

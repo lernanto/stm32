@@ -58,10 +58,11 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define HCSR04_TRIG_Pin GPIO_PIN_4
-#define HCSR04_TRIG_GPIO_Port GPIOA
-#define HCSR04_ECHO_Pin GPIO_PIN_5
-#define HCSR04_ECHO_GPIO_Port GPIOA
+#define HCSR04_TRIG_Pin GPIO_PIN_14
+#define HCSR04_TRIG_GPIO_Port GPIOC
+#define HCSR04_ECHO_Pin GPIO_PIN_15
+#define HCSR04_ECHO_GPIO_Port GPIOC
+#define HCSR04_ECHO_EXTI_IRQn EXTI15_10_IRQn
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
