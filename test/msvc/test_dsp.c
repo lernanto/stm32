@@ -8,7 +8,7 @@
 #include "data.h"
 
 
-int main(int argc, char **argv)
+int test_linear_regression(void)
 {
     static float32_t xwx[FEATURE_NUM][FEATURE_NUM];
     static float32_t ywx[TARGET_NUM][FEATURE_NUM];
@@ -202,6 +202,14 @@ int main(int argc, char **argv)
     }
 
     log_info("done, test MSE = %f", mse);
+    return 1;
+}
 
-    return 0;
+#ifdef __GNUC__
+__attribute__((weak)) int main(int argc, char **argv)
+#else
+int main(int argc, char **argv)
+#endif  /* __GNUC__ */
+{
+    return test_linear_regression() ? 0 : -1;
 }
