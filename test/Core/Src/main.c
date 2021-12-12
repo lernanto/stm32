@@ -19,13 +19,17 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "i2c.h"
+#include "spi.h"
+#include "tim.h"
 #include "usb_device.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "log.h"
 #include "usbd_cdc_if.h"
+
+#include "log.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -35,6 +39,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -45,6 +50,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+static size_t g_log_write_max_retry = 4;
 
 /* USER CODE END PV */
 
@@ -56,6 +62,40 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+static int init(void)
+{
+  return 1;
+}
+
+static int test_log(void)
+{
+  static const char msg[] = "test log write";
+
+  if (_log_write(msg, ARRAYSIZE(msg)) == 0)
+  {
+    g_log_write_max_retry = 1;
+  }
+
+  log_verbose("verbose level = %d", LOG_VERBOSE);
+  HAL_Delay(100);
+  log_debug("debug level = %d", LOG_DEBUG);
+  HAL_Delay(100);
+  log_info("info level = %d", LOG_INFO);
+  HAL_Delay(100);
+  log_warn("warn level = %d", LOG_WARN);
+  HAL_Delay(100);
+  log_error("error level = %d", LOG_ERROR);
+  HAL_Delay(100);
+  log_assert(1);
+
+  return 1;
+}
+
+static int test(void)
+{
+  return test_log();
+}
 
 /* USER CODE END 0 */
 
@@ -87,19 +127,15 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_TIM2_Init();
+  MX_I2C1_Init();
+  MX_SPI1_Init();
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
-  for (int i = 0; i < 100; ++i)
-  {
-	  log_verbose("verbose %d", LOG_VERBOSE);
-	  log_debug("debug %d", LOG_DEBUG);
-	  log_info("info %d", LOG_INFO);
-	  log_warn("warn %d", LOG_WARN);
-	  log_error("error %d", LOG_ERROR);
-	  HAL_Delay(1000);
-  }
+  init();
 
-  log_assert(0);
+  HAL_Delay(10000);
+  test();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -132,7 +168,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL6;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -146,12 +182,12 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
     Error_Handler();
   }
   PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB;
-  PeriphClkInit.UsbClockSelection = RCC_USBCLKSOURCE_PLL;
+  PeriphClkInit.UsbClockSelection = RCC_USBCLKSOURCE_PLL_DIV1_5;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();
@@ -160,6 +196,25 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 
+size_t _log_write(const void *buf, size_t len)
+{
+  uint8_t status = CDC_Transmit_FS((uint8_t *)buf, (uint16_t)len);
+  size_t delay = 10;
+  for (size_t i = 1; (status != USBD_OK) && (i < g_log_write_max_retry); ++i)
+  {
+    HAL_Delay(delay);
+    status = CDC_Transmit_FS((uint8_t *)buf, (uint16_t)len);
+    delay += delay;
+  }
+
+  return (USBD_OK == status) ? len : 0;
+}
+
+void _log_abort(void)
+{
+  log_error("system panic! please reset");
+  while (1);
+}
 /* USER CODE END 4 */
 
 /**
