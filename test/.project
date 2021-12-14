@@ -36,6 +36,16 @@
 			<locationURI>PARENT-1-PROJECT_LOC/lib/hcsr04.c</locationURI>
 		</link>
 		<link>
+			<name>Core/Src/l298n.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/lib/l298n.c</locationURI>
+		</link>
+		<link>
+			<name>Core/Src/misc.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/lib/misc.c</locationURI>
+		</link>
+		<link>
 			<name>Drivers/STM32F1xx_HAL_Driver/stm32f1xx_hal.c</name>
 			<type>1</type>
 			<location>C:/Users/yihuahuang/STM32Cube/Repository/STM32Cube_FW_F1_V1.8.4/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal.c</location>

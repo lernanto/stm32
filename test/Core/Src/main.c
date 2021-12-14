@@ -31,6 +31,8 @@
 
 #include "log.h"
 #include "hcsr04.h"
+#include "l298n.h"
+#include "misc.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -44,9 +46,11 @@ typedef struct
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
 #define HCSR04_MAX_RECORD   10
 #define HCSR04_EXPIRE_TIME  100
+
+#define COUNTER_MIN_INTERVAL  13
+#define COUNTER_SCALE         (65.0f * M_PI / 20)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -63,6 +67,12 @@ static Hcsr04Control g_hcsr04;
 static Hcsr04Record g_hcsr04_records[HCSR04_MAX_RECORD + 1];
 static Hcsr04Record *g_hcsr04_record_begin = g_hcsr04_records;
 static Hcsr04Record *g_hcsr04_record_end = g_hcsr04_records;
+
+static L298nControl g_l298n_left;
+static L298nControl g_l298n_right;
+
+static Counter g_counter_left;
+static Counter g_counter_right;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -75,14 +85,47 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN 0 */
 static int init(void)
 {
-  return hcsr04_init(
+  int result = 1;
+  int res = 0;
+
+  if (!(res = hcsr04_init(
     &g_hcsr04,
     HCSR04_TRIG_GPIO_Port,
     HCSR04_TRIG_Pin,
     HCSR04_ECHO_GPIO_Port,
     HCSR04_ECHO_Pin,
     0
-  );
+  )))
+  {
+    log_error("initialize HC-SR04 error");
+  }
+  result |= res;
+
+  if (!(res = l298n_init(&g_l298n_left, &htim2, TIM_CHANNEL_2, TIM_CHANNEL_1)))
+  {
+    log_error("initialize L298N left motor error");
+  }
+  result |= res;
+
+  if (!(res = l298n_init(&g_l298n_right, &htim2, TIM_CHANNEL_3, TIM_CHANNEL_4)))
+  {
+    log_error("initialize L298N right motor error");
+  }
+  result |= res;
+
+  if (!(res = counter_init(&g_counter_left, COUNTER_MIN_INTERVAL)))
+  {
+    log_error("initialize left counter error");
+  }
+  result |= res;
+
+  if (!(res = counter_init(&g_counter_right, COUNTER_MIN_INTERVAL)))
+  {
+    log_error("initialize right counter error");
+  }
+  result |= res;
+
+  return result;
 }
 
 static uint32_t hcsr04_get_distance(Hcsr04Control *hcsr04, float l2)
@@ -187,10 +230,126 @@ static int test_hcsr04(void)
   return 0;
 }
 
+static int test_l298n(void)
+{
+  uint32_t time = 0;
+  uint32_t left_count = 0;
+  uint32_t right_count = 0;
+  int32_t left_dist = 0;
+  int32_t right_dist = 0;
+  int32_t left_speed = 0;
+  int32_t right_speed = 0;
+  int32_t acc = 0;
+
+  l298n_start(&g_l298n_left);
+  l298n_start(&g_l298n_right);
+  l298n_set_speed(&g_l298n_left, l298n_get_max_speed(&g_l298n_left));
+  l298n_set_speed(&g_l298n_right, -l298n_get_max_speed(&g_l298n_right));
+
+  for (
+    size_t i = 0;
+    (
+      (0 == left_count) || (0 == right_count)
+      || (0 == left_dist) || (0 == right_dist)
+      || (0 == left_speed) || (0 == right_speed)
+    ) && (i < 50);
+  ++i)
+  {
+    HAL_Delay(20);
+    counter_get_state(&g_counter_left, &time, &left_count, &left_dist, &left_speed, &acc);
+    counter_get_state(&g_counter_right, &time, &right_count, &right_dist, &right_speed, &acc);
+  }
+
+  l298n_stop(&g_l298n_left);
+  l298n_stop(&g_l298n_right);
+
+  if ((0 == left_count) || (0 == left_dist) || (0 == left_speed))
+  {
+    log_error(
+      "read left counter error, count = %u, dist = %d, speed = %d",
+      left_count,
+      left_dist,
+      left_speed
+    );
+    return 0;
+  }
+
+  if ((0 == right_count) || (0 == right_dist) || (0 == right_speed))
+  {
+    log_error(
+      "read right counter error, count = %u, dist = %d, speed = %d",
+      right_count,
+      right_dist,
+      right_speed
+    );
+    return 0;
+  }
+
+  HAL_Delay(20);
+  l298n_start(&g_l298n_left);
+  l298n_start(&g_l298n_right);
+  l298n_set_speed(&g_l298n_left, -l298n_get_max_speed(&g_l298n_left));
+  l298n_set_speed(&g_l298n_right, l298n_get_max_speed(&g_l298n_right));
+
+  for (
+    size_t i = 0;
+    (
+      (0 == left_count) || (0 == right_count)
+      || (0 == left_dist) || (0 == right_dist)
+      || (0 == left_speed) || (0 == right_speed)
+    ) && (i < 50);
+  ++i)
+  {
+    HAL_Delay(20);
+    counter_get_state(&g_counter_left, &time, &left_count, &left_dist, &left_speed, &acc);
+    counter_get_state(&g_counter_right, &time, &right_count, &right_dist, &right_speed, &acc);
+  }
+
+  l298n_stop(&g_l298n_left);
+  l298n_stop(&g_l298n_right);
+
+  if ((0 == left_count) || (0 == left_dist) || (0 == left_speed))
+  {
+    log_error(
+      "read left counter error, count = %u, dist = %d, speed = %d",
+      left_count,
+      left_dist,
+      left_speed
+    );
+    return 0;
+  }
+
+  if ((0 == right_count) || (0 == right_dist) || (0 == right_speed))
+  {
+    log_error(
+      "read right counter error, count = %u, dist = %d, speed = %d",
+      right_count,
+      right_dist,
+      right_speed
+    );
+    return 0;
+  }
+
+  log_info("test L298N OK");
+  return 1;
+}
+
 static int test(void)
 {
-  return test_log()
-    & test_hcsr04();
+  int result =  test_log()
+    & test_hcsr04()
+    & test_l298n();
+
+  if (result)
+  {
+    log_info("all tests OK");
+  }
+  else
+  {
+    log_error("some test error");
+  }
+
+  return result;
 }
 /* USER CODE END 0 */
 
@@ -316,6 +475,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
     else {
       hcsr04_echo_begin(&g_hcsr04);
     }
+    break;
+
+  case COUNTER_LEFT_Pin:
+    counter_inc(&g_counter_left);
+    break;
+
+  case COUNTER_RIGHT_Pin:
+    counter_inc(&g_counter_right);
     break;
 
   default:
