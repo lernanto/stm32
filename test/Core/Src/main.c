@@ -30,16 +30,23 @@
 #include "usbd_cdc_if.h"
 
 #include "log.h"
+#include "hcsr04.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+typedef struct
+{
+  uint32_t time;
+  uint32_t distance;
+} Hcsr04Record;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
+#define HCSR04_MAX_RECORD   10
+#define HCSR04_EXPIRE_TIME  100
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -52,6 +59,10 @@
 /* USER CODE BEGIN PV */
 static size_t g_log_write_max_retry = 4;
 
+static Hcsr04Control g_hcsr04;
+static Hcsr04Record g_hcsr04_records[HCSR04_MAX_RECORD + 1];
+static Hcsr04Record *g_hcsr04_record_begin = g_hcsr04_records;
+static Hcsr04Record *g_hcsr04_record_end = g_hcsr04_records;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -62,10 +73,77 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
 static int init(void)
 {
-  return 1;
+  return hcsr04_init(
+    &g_hcsr04,
+    HCSR04_TRIG_GPIO_Port,
+    HCSR04_TRIG_Pin,
+    HCSR04_ECHO_GPIO_Port,
+    HCSR04_ECHO_Pin,
+    0
+  );
+}
+
+static uint32_t hcsr04_get_distance(Hcsr04Control *hcsr04, float l2)
+{
+  uint32_t now = HAL_GetTick();
+  Hcsr04Record *p = NULL;
+  size_t n = 0.0f;
+  float x = 0.0f;
+  float y = 0.0f;
+  float x2 = 0.0f;
+  float xy = 0.0f;
+  float det = 0.0f;
+  float w = 0.0f;
+  float b = 0.0f;
+
+  while (
+    (g_hcsr04_record_begin->time + HCSR04_EXPIRE_TIME < now)
+    && (g_hcsr04_record_begin != g_hcsr04_record_end)
+  )
+  {
+    circular_inc(g_hcsr04_records, ARRAYSIZE(g_hcsr04_records), g_hcsr04_record_begin);
+  }
+
+  if (circular_size(
+    g_hcsr04_record_begin,
+    g_hcsr04_record_end,
+    ARRAYSIZE(g_hcsr04_records)
+  ) == 0)
+  {
+    return HCSR04_INVALID_DISTANCE;
+  }
+
+  /* 线性回归求当前距离，迭代求解 */
+  for (
+    p = g_hcsr04_record_begin, n = 1, x = 0, y = 0, x2 = 0, xy = 0;
+    p != g_hcsr04_record_end;
+    circular_inc(g_hcsr04_records, ARRAYSIZE(g_hcsr04_records), p), ++n
+  )
+  {
+    float a = 1.0f / n;
+    x = (1 - a) * x + a * p->time;
+    y = (1 - a) * y + a * p->distance;
+    x2 = (1 - a) * x2 + a * p->time * p->time;
+    xy = (1 - a) * xy + a * p->time * p->distance;
+  }
+
+  det = (x2 + l2) * (1 + l2) - x * x;
+  if ((det < -1e-6f) || (det > 1e-6f))
+  {
+    /* 矩阵满秩，线性方程有特解 */
+    w = (xy * (1 + l2) - x * y) / det;
+    b = (y - w * x) / (1 + l2);
+  }
+  else
+  {
+    /* 方程有无穷多解，退化为求均值 */
+    w = 0;
+    b = y / (1 + l2);
+  }
+
+  return (uint32_t)(w * now + b);
 }
 
 static int test_log(void)
@@ -92,11 +170,28 @@ static int test_log(void)
   return 1;
 }
 
-static int test(void)
+static int test_hcsr04(void)
 {
-  return test_log();
+  for (size_t i = 0; i < 100; ++i)
+  {
+    hcsr04_trigger(&g_hcsr04);
+    HAL_Delay(10);
+    if (hcsr04_get_distance(&g_hcsr04, 0) != HCSR04_INVALID_DISTANCE)
+    {
+      log_info("test HC-SR04 OK");
+      return 1;
+    }
+  }
+
+  log_error("HC-SR04 cannot get distance. may not work");
+  return 0;
 }
 
+static int test(void)
+{
+  return test_log()
+    & test_hcsr04();
+}
 /* USER CODE END 0 */
 
 /**
@@ -195,6 +290,38 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  switch (GPIO_Pin)
+  {
+  case HCSR04_ECHO_Pin:
+    if (GPIO_PIN_RESET == HAL_GPIO_ReadPin(g_hcsr04.echo_port, g_hcsr04.echo_pin))
+    {
+      uint32_t dist = HCSR04_INVALID_DISTANCE;
+      log_assert(HCSR04_ECHO_BEGIN == g_hcsr04.state);
+      hcsr04_echo_end(&g_hcsr04);
+
+      if ((dist = hcsr04_read_nowait(&g_hcsr04)) != HCSR04_INVALID_DISTANCE)
+      {
+        g_hcsr04_record_end->time = g_hcsr04.echo_end_ms;
+        g_hcsr04_record_end->distance = dist;
+        circular_push(
+          g_hcsr04_records,
+          ARRAYSIZE(g_hcsr04_records),
+          g_hcsr04_record_begin,
+          g_hcsr04_record_end
+        );
+      }
+    }
+    else {
+      hcsr04_echo_begin(&g_hcsr04);
+    }
+    break;
+
+  default:
+    break;
+  }
+}
 
 size_t _log_write(const void *buf, size_t len)
 {
