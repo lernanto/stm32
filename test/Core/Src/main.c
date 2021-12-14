@@ -6,7 +6,7 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; Copyright (c) 2019 STMicroelectronics.
+  * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
   * All rights reserved.</center></h2>
   *
   * This software component is licensed by ST under BSD 3-Clause license,
@@ -27,14 +27,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <math.h>
-
 #include "usbd_cdc_if.h"
 
-#include "util.h"
 #include "log.h"
 #include "hcsr04.h"
-#include "adxl345.h"
 #include "l298n.h"
 #include "misc.h"
 /* USER CODE END Includes */
@@ -46,20 +42,22 @@ typedef struct
   uint32_t time;
   uint32_t distance;
 } Hcsr04Record;
-
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define LOG_WRITE_MAX_RETRY 3
+
 #define HCSR04_MAX_RECORD   10
 #define HCSR04_EXPIRE_TIME  100
 
 #define COUNTER_MIN_INTERVAL  13
-#define COUNTER_SCALE         (65.0f * M_PI / 20.0f)
+#define COUNTER_SCALE         (65.0f * M_PI / 20)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
+
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -77,8 +75,6 @@ static L298nControl g_l298n_right;
 
 static Counter g_counter_left;
 static Counter g_counter_right;
-
-static Adxl345I2cControl g_adxl345_i2c;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -131,22 +127,6 @@ static int init(void)
   }
   result |= res;
 
-  res = ((adxl345_i2c_init(&g_adxl345_i2c, &hi2c1, ADXL345_ALT_ADDR, 10) == HAL_OK)
-    && (adxl345_init((Adxl345Control *)&g_adxl345_i2c) == HAL_OK));
-  if (!res)
-  {
-    log_error("initialize ADXL345 error");
-  }
-  result |= res;
-
-  if (result)
-  {
-    log_info("initialize OK");
-  }
-  else
-  {
-    log_error("initailize error");
-  }
   return result;
 }
 
@@ -382,28 +362,7 @@ static int test(void)
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  static Adxl345Control *padxl345 = (Adxl345Control *)&g_adxl345_i2c;
-  HAL_StatusTypeDef status = HAL_OK;
 
-  uint32_t time = 0;
-  uint32_t distance = 0;
-  int32_t x = 0;
-  int32_t y = 0;
-  int32_t z = 0;
-  uint32_t left_count = 0;
-  uint32_t right_count = 0;
-  int32_t left_dist = 0;
-  int32_t right_dist = 0;
-  int32_t left_speed = 0;
-  int32_t right_speed = 0;
-  int32_t left_acc = 0;
-  int32_t right_acc = 0;
-  int dir = 0;
-  int old_dir = 0;
-  int32_t left_pulse = 0;
-  int32_t right_pulse = 0;
-  double speed = 0;
-  double acc = 0;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -429,142 +388,19 @@ int main(void)
   MX_SPI1_Init();
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
+  init();
+
   HAL_Delay(10000);
-
-  if (!init())
-  {
-    log_error("cannot initialize. system down");
-    while (1);
-  }
-
-  if (test())
-  {
-    log_info("test OK. run system normally");
-  }
-  else
-  {
-    log_error("test failed. run system on best efford");
-  }
-
-  HAL_Delay(20);
-  status = l298n_start(&g_l298n_left);
-  status = l298n_start(&g_l298n_right);
+  test();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    uint32_t max_speed = l298n_get_max_speed(&g_l298n_left);
-    status = hcsr04_trigger(&g_hcsr04);
-    distance = hcsr04_get_distance(&g_hcsr04, 0);
-    status = adxl345_get_acc(padxl345, &x, &y, &z);
-    counter_get_state(&g_counter_left, &time, &left_count, &left_dist, &left_speed, &left_acc);
-    counter_get_state(&g_counter_right, &time, &right_count, &right_dist, &right_speed, &right_acc);
-
-    if ((HCSR04_INVALID_DISTANCE == distance) || (distance > 2000))
-    {
-      l298n_stop(&g_l298n_left);
-      l298n_stop(&g_l298n_right);
-    }
-    else 
-    {
-      float d = 200.0f - distance;
-      float sl = ((dir >= 0) ? left_dist : -left_dist) * COUNTER_SCALE;
-      float sr = ((dir >= 0) ? right_dist : -right_dist) * COUNTER_SCALE;
-      float s = (sl + sr) / 2.0f;
-      float vl = ((dir >= 0) ? left_speed : -left_speed) * COUNTER_SCALE;
-      float vr = ((dir >= 0) ? right_speed : -right_speed) * COUNTER_SCALE;
-      float v = (vl + vr) / 2.0f;
-      float al = ((dir >= 0) ? left_acc : -left_acc) * COUNTER_SCALE / 1000.0f;
-      float ar = ((dir >= 0) ? right_acc : -right_acc) * COUNTER_SCALE / 1000.0f;
-      float dsl = sl - s;
-      float dsr = sr - s;
-      float dvl = vl - v;
-      float dvr = vr - v;
-
-      float dest_a = MIN(MAX(-(d + v), -10.0f), 10.0f);
-      float dest_al = dest_a - (dsl + dvl);
-      float dest_ar = dest_a - (dsr + dvr);
-
-      old_dir = dir;
-      if (dest_a >= 0)
-      {
-        dir = 1;
-        dest_al = MAX(dest_al, 0);
-        dest_ar = MAX(dest_ar, 0);
-      }
-      else
-      {
-        dir = -1;
-        dest_al = MIN(dest_al, 0);
-        dest_ar = MIN(dest_ar, 0);
-      }
-
-      if (dir != old_dir)
-      {
-        /* 转向 */
-        left_pulse = 0;
-        right_pulse = 0;
-        l298n_stop(&g_l298n_left);
-        l298n_stop(&g_l298n_right);
-        counter_reset(&g_counter_left);
-        counter_reset(&g_counter_right);
-      }
-      else
-      {
-        if (al < dest_al)
-        {
-          left_pulse = MIN(left_pulse + 1, max_speed);
-        }
-        else if (al > dest_al)
-        {
-          left_pulse = MAX(left_pulse - 1, -max_speed);
-        }
-
-        if (ar < dest_ar)
-        {
-          right_pulse = MIN(right_pulse + 1, max_speed);
-        }
-        else if (ar > dest_ar)
-        {
-          right_pulse = MAX(right_pulse - 1, -max_speed);
-        }
-      }
-
-      log_debug(
-        "d = %f, sl = %f, sr = %f, vl = %f, vr = %f, al = %f, ar = %f, dest_al = %f, dest_ar = %f, left_pulse = %d, right_pulse = %d",
-        d,
-        sl,
-        sr,
-        vl,
-        vr,
-        al,
-        ar,
-        dest_al,
-        dest_ar,
-        left_pulse,
-        right_pulse
-      );
-    }
-
-    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, ((left_pulse != 0) || (right_pulse != 0)) ? GPIO_PIN_RESET : GPIO_PIN_SET);
-    l298n_set_speed(&g_l298n_left, left_pulse);
-    l298n_set_speed(&g_l298n_right, right_pulse);
-    if (l298n_get_state(&g_l298n_left) == L298N_STOP)
-    {
-      l298n_start(&g_l298n_left);
-    }
-    if (l298n_get_state(&g_l298n_right) == L298N_STOP)
-    {
-      l298n_start(&g_l298n_right);
-    }
-
-    HAL_Delay(10);
   }
   /* USER CODE END 3 */
 }
@@ -619,28 +455,23 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
   switch (GPIO_Pin)
   {
-  case SW18015P_Pin:
-    break;
-
   case HCSR04_ECHO_Pin:
     if (GPIO_PIN_RESET == HAL_GPIO_ReadPin(g_hcsr04.echo_port, g_hcsr04.echo_pin))
     {
-      if (HCSR04_ECHO_BEGIN == g_hcsr04.state)
-      {
-        uint32_t dist = HCSR04_INVALID_DISTANCE;
-        hcsr04_echo_end(&g_hcsr04);
+      uint32_t dist = HCSR04_INVALID_DISTANCE;
+      log_assert(HCSR04_ECHO_BEGIN == g_hcsr04.state);
+      hcsr04_echo_end(&g_hcsr04);
 
-        if ((dist = hcsr04_read_nowait(&g_hcsr04)) != HCSR04_INVALID_DISTANCE)
-        {
-          g_hcsr04_record_end->time = g_hcsr04.echo_end_ms;
-          g_hcsr04_record_end->distance = dist;
-          circular_push(
-            g_hcsr04_records,
-            ARRAYSIZE(g_hcsr04_records),
-            g_hcsr04_record_begin,
-            g_hcsr04_record_end
-          );
-        }
+      if ((dist = hcsr04_read_nowait(&g_hcsr04)) != HCSR04_INVALID_DISTANCE)
+      {
+        g_hcsr04_record_end->time = g_hcsr04.echo_end_ms;
+        g_hcsr04_record_end->distance = dist;
+        circular_push(
+          g_hcsr04_records,
+          ARRAYSIZE(g_hcsr04_records),
+          g_hcsr04_record_begin,
+          g_hcsr04_record_end
+        );
       }
     }
     else {
@@ -663,19 +494,13 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 
 size_t _log_write(const void *buf, size_t len)
 {
-  uint8_t status;
-  size_t i;
-  size_t delay;
-
-  status = CDC_Transmit_FS((uint8_t *)buf, (uint16_t)len);
-  for (
-    i = 1, delay = 10;
-    (status != USBD_OK) && (i < g_log_write_max_retry);
-    ++i, delay += delay
-  )
+  uint8_t status = CDC_Transmit_FS((uint8_t *)buf, (uint16_t)len);
+  size_t delay = 10;
+  for (size_t i = 1; (status != USBD_OK) && (i < g_log_write_max_retry); ++i)
   {
     HAL_Delay(delay);
     status = CDC_Transmit_FS((uint8_t *)buf, (uint16_t)len);
+    delay += delay;
   }
 
   return (USBD_OK == status) ? len : 0;
@@ -686,7 +511,6 @@ void _log_abort(void)
   log_error("system panic! please reset");
   while (1);
 }
-
 /* USER CODE END 4 */
 
 /**
@@ -697,7 +521,10 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-
+  __disable_irq();
+  while (1)
+  {
+  }
   /* USER CODE END Error_Handler_Debug */
 }
 
@@ -713,7 +540,7 @@ void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
-     tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
