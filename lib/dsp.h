@@ -14,7 +14,7 @@ extern int dsp_lwlr_init(
     size_t label_num,
     float32_t *var,
     float32_t *xwx,
-    float32_t *xwy
+    float32_t *ywx
 );
 
 extern int dsp_lwlr_add_sample(
@@ -25,14 +25,14 @@ extern int dsp_lwlr_add_sample(
     float32_t decay,
     float32_t *var,
     float32_t *xwx,
-    float32_t *xwy
+    float32_t *ywx
 );
 
 extern int dsp_lwlr_solve(
     size_t feature_num,
     size_t label_num,
-    const float32_t *xwx,
-    const float32_t *xwy,
+    float32_t *xwx,
+    const float32_t *ywx,
     float32_t l2,
     float32_t *coef
 );
