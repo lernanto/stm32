@@ -6,8 +6,7 @@
 #ifndef _DSP_H
 #define _DSP_H
 
-
-typedef float float32_t;
+#include "arm_math.h"
 
 
 extern int dsp_lwlr_init(
@@ -29,19 +28,19 @@ extern int dsp_lwlr_add_sample(
     float32_t *xwy
 );
 
-extern int dsp_lwlr_estimate(
+extern int dsp_lwlr_solve(
     size_t feature_num,
     size_t label_num,
     const float32_t *xwx,
-    const float32_t *wxy,
+    const float32_t *xwy,
     float32_t l2,
-    float32_t *theta
+    float32_t *coef
 );
 
 extern int dsp_lwlr_predict(
     size_t feature_num,
     size_t label_num,
-    const float32_t *theta,
+    const float32_t *coef,
     const float32_t *x,
     float32_t *y
 );
