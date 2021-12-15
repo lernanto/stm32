@@ -6,7 +6,6 @@
 #include <string.h>
 
 #include "arm_math.h"
-#include "dsp/matrix_functions.h"
 
 #include "dsp.h"
 #include "log.h"
@@ -17,12 +16,12 @@ int dsp_lwlr_init(
     size_t label_num,
     float32_t *var,
     float32_t *xwx,
-    float32_t *xwy
+    float32_t *ywx
 )
 {
-    *var = 1.0f;
+    *var = 0.0f;
     arm_fill_f32(0.0f, xwx, feature_num * feature_num);
-    arm_fill_f32(0.0f, xwy, feature_num * label_num);
+    arm_fill_f32(0.0f, ywx, label_num * feature_num);
     return 1;
 }
 
@@ -34,7 +33,7 @@ int dsp_lwlr_add_sample(
     float32_t decay,
     float32_t *var,
     float32_t *xwx,
-    float32_t *xwy
+    float32_t *ywx
 )
 {
     float32_t w;
@@ -42,20 +41,38 @@ int dsp_lwlr_add_sample(
     *var = *var * decay + 1;
     w = 1.0f / *var;
 
-    /* TODO: 使用 CMSIS DSP 库加快矩阵运算 */
-    for (size_t i = 0; i < feature_num; ++i)
+    /* TODO: 使用 DSP 指令优化向量运算速度 */
+    for (size_t i = 0, base = 0; i < feature_num; ++i, base += feature_num)
     {
-        for (size_t j = 0; j < feature_num; ++j)
+        /* XWX 是对称阵，只计算其中一半 */
+        for (size_t j = i; j < feature_num; ++j)
         {
-            xwx[i * feature_num + j] = (1 - w) * xwx[i * feature_num + j]
+            xwx[base + j] = (1 - w) * xwx[base + j]
                 + w * x[i] * x[j];
         }
+    }
 
-        for (size_t j = 0; j < label_num; ++j)
+    if (1 == label_num)
+    {
+        /* 当 y 为一维时，使用向量运算加快速度，注意 1 - w = w * y * ((var - 1) / y) */
+        arm_scale_f32(ywx, (*var - 1.0f) / *y, ywx, feature_num);
+        arm_add_f32(ywx, x, ywx, feature_num);
+        arm_scale_f32(ywx, w * *y, ywx, feature_num);
+    }
+    else
+    {
+        /* 注意 1 - w = w * (var - 1) */
+        arm_scale_f32(ywx, (*var - 1.0f), ywx, label_num * feature_num);
+
+        for (size_t j = 0, base = 0; j < label_num; ++j, base += feature_num)
         {
-            xwy[i * label_num + j] = (1 - w) * xwy[i * label_num + j]
-                + w * x[i] * y[j];
+            for (size_t i = 0; i < feature_num; ++i)
+            {
+                ywx[base + i] += x[i] * y[j];
+            }
         }
+
+        arm_scale_f32(ywx, w, ywx, label_num * feature_num);
     }
 
     return 1;
@@ -64,8 +81,8 @@ int dsp_lwlr_add_sample(
 int dsp_lwlr_solve(
     size_t feature_num,
     size_t label_num,
-    const float32_t *xwx,
-    const float32_t *xwy,
+    float32_t *xwx,
+    const float32_t *ywx,
     float32_t l2,
     float32_t *coef
 )
@@ -75,18 +92,25 @@ int dsp_lwlr_solve(
 
     arm_matrix_instance_f32 a;
     arm_matrix_instance_f32 a_inv;
-    arm_matrix_instance_f32 b;
-    arm_matrix_instance_f32 x;
     arm_status status = ARM_MATH_SUCCESS;
 
-    /* 解线性方程组 (XWX + l2 * I) * coef = XWy */
+    /* 解线性方程组 (XWX + l2 * I) * coef = yWX */
+    /* 对称阵 XWX 只计算了一半，先复制补全对称的另一半 */
+    for (size_t i = 0, base = 0; i < feature_num; ++i, base += feature_num)
+    {
+        for (size_t j = base, k = i; j < base + i; ++j, k += feature_num)
+        {
+            xwx[j] = xwx[k];
+        }
+    }
+
     /* 计算 XWX + l2 * I */
     if (l2 > 0.0f)
     {
         arm_copy_f32(xwx, a_data, feature_num * feature_num);
-        for (size_t i = 0; i < feature_num; ++i)
+        for (size_t i = 0; i < feature_num * feature_num; i += feature_num + 1)
         {
-            a_data[i * feature_num + i] += l2;
+            a_data[i] += l2;
         }
         arm_mat_init_f32(&a, feature_num, feature_num, a_data);
     }
@@ -103,10 +127,22 @@ int dsp_lwlr_solve(
         return 0;
     }
 
-    /* (XWX + l2 * I) ^ -1 * XWy 即为方程的解 */
-    arm_mat_init_f32(&b, feature_num, label_num, (float32_t *)xwy);
-    arm_mat_init_f32(&x, feature_num, label_num, coef);
-    arm_mat_mult_f32(&a, &b, &x);
+    /* yWX * (XWX + l2 * I) ^ -1 即为方程的解 */
+    if (1 == label_num)
+    {
+        /* 当 yWX 为向量时使用矩阵乘向量方式 */
+        arm_mat_vec_mult_f32(&a_inv, ywx, coef);
+    }
+    else
+    {
+        /* 当 yWX 为矩阵时使用矩阵乘 */
+        arm_matrix_instance_f32 b;
+        arm_matrix_instance_f32 x;
+
+        arm_mat_init_f32(&b, label_num, feature_num, (float32_t *)ywx);
+        arm_mat_init_f32(&x, label_num, feature_num, coef);
+        arm_mat_mult_f32(&b, &a_inv, &x);
+    }
 
 #if 0
     /* 对 XWX + l2 * I 进行 Cholesky 分解 */
@@ -142,9 +178,17 @@ int dsp_lwlr_predict(
     float32_t *y
 )
 {
-    arm_matrix_instance_f32 coef_mat;
+    if (1 == label_num)
+    {
+        arm_dot_prod_f32(coef, x, feature_num, y);
+    }
+    else
+    {
+        arm_matrix_instance_f32 coef_mat;
 
-    arm_mat_init_f32(&coef_mat, feature_num, label_num, (float32_t *)coef);
-    arm_mat_vec_mult_f32(&coef_mat, x, y);
+        arm_mat_init_f32(&coef_mat, label_num, feature_num, (float32_t *)coef);
+        arm_mat_vec_mult_f32(&coef_mat, x, y);
+    }
+
     return 1;
 }
