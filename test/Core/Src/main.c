@@ -29,7 +29,7 @@
 /* USER CODE BEGIN Includes */
 #include "usbd_cdc_if.h"
 
-#include "dsp/distance_functions.h"
+#include "arm_math.h"
 
 #include "log.h"
 #include "dsp.h"
@@ -109,9 +109,9 @@ static int test(void)
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  static float32_t xwx[FEATURE_NUM * FEATURE_NUM];
-  static float32_t xwy[FEATURE_NUM * LABEL_NUM];
-  static float32_t coef[FEATURE_NUM * LABEL_NUM];
+  static float32_t xwx[FEATURE_NUM][FEATURE_NUM];
+  static float32_t ywx[LABEL_NUM][FEATURE_NUM];
+  static float32_t coef[LABEL_NUM][FEATURE_NUM];
   float32_t var;
   float32_t pred_y[LABEL_NUM];
   size_t n;
@@ -148,7 +148,7 @@ int main(void)
   HAL_Delay(10000);
   test();
 
-  dsp_lwlr_init(FEATURE_NUM, LABEL_NUM, &var, xwx, xwy);
+  dsp_lwlr_init(FEATURE_NUM, LABEL_NUM, &var, (float32_t *)xwx, (float32_t *)ywx);
 
   for (i = 0; i < TRAIN_SAMPLE_NUM; ++i)
   {
@@ -159,19 +159,26 @@ int main(void)
       train_y[i],
       1.0f,
       &var,
-      xwx,
-      xwy
+      (float32_t *)xwx,
+      (float32_t *)ywx
     );
   }
 
-  dsp_lwlr_solve(FEATURE_NUM, LABEL_NUM, xwx, xwy, 0.0f, coef);
+  dsp_lwlr_solve(
+    FEATURE_NUM,
+    LABEL_NUM,
+    (float32_t *)xwx,
+    (float32_t *)ywx,
+    0.0f,
+    (float32_t *)coef
+  );
 
   for (i = 0, n = 1, mse = 0.0f; i < TEST_SAMPLE_NUM; ++i)
   {
     float32_t dist;
     float32_t w;
 
-    dsp_lwlr_predict(FEATURE_NUM, LABEL_NUM, coef, test_x[i], pred_y);
+    dsp_lwlr_predict(FEATURE_NUM, LABEL_NUM, (float32_t *)coef, test_x[i], pred_y);
 
     dist = arm_euclidean_distance_f32(
       (float32_t *)test_y,
