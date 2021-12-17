@@ -10,9 +10,15 @@
 #include <string.h>
 #include <stdio.h>
 
+#ifdef __arm__
 #include "stm32f1xx_hal.h"
 
-#include "util.h"
+#define _log_get_timestamp() (HAL_GetTick())
+#else
+#include <time.h>
+
+#define _log_get_timestamp() ((unsigned)time(NULL))
+#endif  /* __arm__ */
 
 
 /**
@@ -56,19 +62,20 @@ typedef enum
 /**
  * 实际输出一条日志字符串到设备，实际输出日志时应重新实现此函数.
  */
-__attribute__((weak)) size_t _log_write(const void *buf, size_t len);
+extern size_t _log_write(const void *buf, size_t len);
 
 /**
  * 断言失败退出，使用断言应重新实现此函数.
  */
-__attribute__((weak, noreturn)) void _log_abort(void);
+extern void _log_abort(void);
 
 /**
  * 输出一条日志，日志实际输出的设备需要配置.
  */
-__STATIC_INLINE int _log_log(
+static inline int _log_log(
     LogLevel level,
     const char *flag,
+    unsigned timestamp,
     int src,
     const char *file,
     const char *func,
@@ -81,7 +88,7 @@ __STATIC_INLINE int _log_log(
     int n = 0;
 
     /* 输出预定义的头部和时间 */
-    n = snprintf(buf, sizeof(buf), "[%s] %lu ", flag, HAL_GetTick());
+    n = snprintf(buf, sizeof(buf), "[%s] %u ", flag, timestamp);
     if (n < 0)
     {
         return n;
@@ -129,10 +136,10 @@ __STATIC_INLINE int _log_log(
 /**
  * 输出日志的基本接口.
  */
-#define log_log(level, flag, src, msg, ...) \
+#define log_log(level, flag, src, ...) \
 do { if ((level) >= LOG_LEVEL) \
-    _log_log((level), (flag), (src), __FILE__, __FUNCTION__, __LINE__, \
-        msg __VA_OPT__(,) __VA_ARGS__); \
+    _log_log((level), (flag), _log_get_timestamp(), (src), \
+    __FILE__, __func__, __LINE__, __VA_ARGS__); \
 } while (0)
 
 /*
