@@ -4,7 +4,7 @@ LINK = link
 CMSIS_ROOT = D:\git\CMSIS_5\CMSIS
 LIB_ROOT = ..\..\lib
 INC = /I . /I $(LIB_ROOT) /I $(CMSIS_ROOT)\DSP\Include /I $(CMSIS_ROOT)\DSP\PrivateInclude
-CFLAGS = $(INC) -O2
+CFLAGS = $(INC)
 
 all: test_dsp.exe
 

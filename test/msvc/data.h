@@ -11,10 +11,10 @@
 
 #define TRAIN_SAMPLE_NUM  100
 #define TEST_SAMPLE_NUM 10
-#define FEATURE_NUM 10
-#define TARGET_NUM  5
+#define FEATURE_DIM 10
+#define TARGET_DIM  5
 
-static const float32_t _coef[TARGET_NUM][FEATURE_NUM] = {
+static const float32_t _coef[TARGET_DIM][FEATURE_DIM] = {
     { 3.938638f, 1.227211f, 0.878373f, 2.061817f, 1.316537f, -0.202576f, 1.147425f, 1.126924f, 2.161004f, 3.312388f },
     { 1.066629f, 3.987960f, 0.217437f, 1.205825f, 0.582624f, -0.687164f, -2.402328f, 1.766778f, 2.483601f, -0.706291f },
     { 3.430056f, 3.822188f, 3.605134f, 0.697245f, 4.583991f, 0.548405f, 4.536303f, 2.040515f, 2.494647f, 3.820229f },
@@ -22,7 +22,7 @@ static const float32_t _coef[TARGET_NUM][FEATURE_NUM] = {
     { 3.413986f, -0.283090f, 0.305046f, -1.420904f, 3.328033f, 1.781775f, 3.474160f, 1.210643f, 3.850190f, -1.794156f },
 };
 
-static const float32_t train_x[TRAIN_SAMPLE_NUM][FEATURE_NUM] = {
+static const float32_t train_x[TRAIN_SAMPLE_NUM][FEATURE_DIM] = {
     { 1.000000f, -0.784401f, 0.279857f, -0.405508f, -0.489702f, 1.169653f, -1.949645f, 1.412790f, 1.274143f, 1.223228f },
     { 1.000000f, -1.196420f, 0.208188f, -1.747398f, 2.881145f, -2.173840f, -1.788700f, -0.889847f, 0.267260f, -0.866100f },
     { 1.000000f, 0.754583f, -0.050806f, 0.535152f, 0.651235f, -1.300247f, 0.883387f, -0.978392f, 0.688882f, -0.476097f },
@@ -125,7 +125,7 @@ static const float32_t train_x[TRAIN_SAMPLE_NUM][FEATURE_NUM] = {
     { 1.000000f, 0.980603f, 0.506503f, -0.290777f, 0.082973f, -0.086528f, 1.438779f, 0.075661f, 0.104789f, 0.156464f },
 };
 
-static float32_t train_y[TRAIN_SAMPLE_NUM][TARGET_NUM] = {
+static float32_t train_y[TRAIN_SAMPLE_NUM][TARGET_DIM] = {
     { 8.278260f, 6.469982f, 1.125084f, 5.536048f, 2.875941f },
     { -3.013253f, 0.852789f, -1.387697f, -9.368862f, 8.159895f },
     { 6.688184f, 4.416195f, 9.881161f, 2.577122f, 7.129844f },
@@ -228,7 +228,7 @@ static float32_t train_y[TRAIN_SAMPLE_NUM][TARGET_NUM] = {
     { 7.980852f, 2.007237f, 16.499131f, 8.256451f, 10.326337f },
 };
 
-static const float32_t test_x[TEST_SAMPLE_NUM][FEATURE_NUM] = {
+static const float32_t test_x[TEST_SAMPLE_NUM][FEATURE_DIM] = {
     { 1.000000f, 0.544915f, -0.091051f, 1.486835f, 0.677361f, -1.416987f, -1.438638f, 1.118824f, -1.508138f, 0.091406f },
     { 1.000000f, -0.325164f, -0.137112f, -0.086474f, 0.260290f, 1.504464f, -1.162580f, 1.392745f, -0.377379f, -1.402591f },
     { 1.000000f, -0.859415f, 0.479381f, 0.141531f, -0.580969f, 0.377469f, -1.035445f, 0.976670f, 0.416420f, 0.566938f },
@@ -241,7 +241,7 @@ static const float32_t test_x[TEST_SAMPLE_NUM][FEATURE_NUM] = {
     { 1.000000f, 0.399093f, 0.473211f, 1.863069f, -0.313110f, 0.800260f, -0.069576f, -0.198527f, 0.483520f, -0.681211f },
 };
 
-static const float32_t test_y[TEST_SAMPLE_NUM][TARGET_NUM] = {
+static const float32_t test_y[TEST_SAMPLE_NUM][TARGET_DIM] = {
     { 6.330951f, 7.818419f, 2.299738f, -1.843157f, -7.248245f },
     { -1.672581f, 2.290343f, -4.547452f, 4.338773f, 6.069390f },
     { 5.390421f, 1.744641f, -0.169690f, 4.174136f, 2.247472f },
