@@ -213,6 +213,7 @@ int dsp_linear_regression1_add_sample(
 {
     float32_t decay = 1.0f - weight;
 
+    *ex = decay * *ex + weight * x;
     *ey = decay * *ey + weight * y;
     *ex2 = decay * *ex2 + weight * x * x;
     *exy = decay * *exy + weight * x * y;
