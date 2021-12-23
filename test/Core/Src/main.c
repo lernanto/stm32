@@ -61,6 +61,7 @@ static size_t g_log_write_max_retry = 4;
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 extern int test_linear_regression(void);
+extern int test_locally_weighted_linear_regression(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -73,7 +74,7 @@ static int init(void)
 
 static int test_log(void)
 {
-  static const char msg[] = "test log write";
+  static const char msg[] = "test log write\n";
 
   if (_log_write(msg, ARRAYSIZE(msg)) == 0)
   {
@@ -97,8 +98,12 @@ static int test_log(void)
 
 static int test(void)
 {
-  return test_log()
-    & test_linear_regression();
+  int succ = 1;
+
+  succ &= test_log();
+  succ &= test_linear_regression();
+  succ &= test_locally_weighted_linear_regression();
+  return succ;
 }
 
 /* USER CODE END 0 */
