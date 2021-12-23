@@ -44,17 +44,190 @@ static inline float32_t square_error(float32_t y_true, float32_t y_pred)
     return err * err * 0.5f;
 }
 
+static int linear_regression(
+    size_t train_sample_num,
+    size_t test_sample_num,
+    size_t feature_num,
+    size_t target_num,
+    const float32_t *train_x,
+    const float32_t *train_y,
+    const float32_t *test_x,
+    const float32_t *test_y,
+    float32_t l2
+)
+{
+    size_t dim = feature_num + 1;
+#ifdef __GNUC__
+    float32_t xwx[dim * dim];
+    float32_t xwy[dim* target_num];
+    float32_t coef[dim];
+    float32_t y_pred[target_num];
+#else
+    float32_t *xwx = (float32_t *)malloc(sizeof(float32_t) * dim * dim);
+    float32_t *xwy = (float32_t *)malloc(sizeof(float32_t) * dim * target_num);
+    float32_t *coef = (float32_t *)malloc(sizeof(float32_t) * dim);
+    float32_t *y_pred = (float32_t *)malloc(sizeof(float32_t) * target_num);
+#endif  /* __GNUC__ */
+    int ret;
+    float32_t mse;
+
+    log_info(
+        "linear regression, feature num = %u, target num = %u",
+        feature_num,
+        target_num
+    );
+
+    dsp_linear_regression_init(feature_num, target_num, xwx, xwy);
+
+    for (size_t i = 0; i < train_sample_num; ++i)
+    {
+        dsp_linear_regression_update(
+            feature_num,
+            target_num,
+            train_x + i * feature_num,
+            train_y + i * target_num,
+            1.0f / (float32_t)(i + 1),
+            xwx,
+            xwy
+        );
+
+        log_verbose("x =");
+        for (size_t j = 0; j < feature_num; ++j)
+        {
+            log_verbose("%f", train_x[i * feature_num + j]);
+        }
+        log_verbose("y =");
+        for (size_t j = 0; j < target_num; ++j)
+        {
+            log_verbose("%f", train_y[i * target_num + j]);
+        }
+    }
+
+    log_debug("XWX =");
+    for (size_t i = 0; i < dim * dim; ++i)
+    {
+        log_debug("%f", xwx[i]);
+    }
+    log_debug("XWY =");
+    for (size_t i = 0; i < dim * target_num; ++i)
+    {
+        log_debug("%f", xwy[i]);
+    }
+
+    ret = dsp_linear_regression_solve(
+        feature_num,
+        target_num,
+        xwx,
+        xwy,
+        l2,
+        coef
+    );
+
+    if (ret)
+    {
+        log_debug("solve linear regression, coef =");
+        for (size_t i = 0; i < dim; ++i)
+        {
+            for (size_t j = 0; j < target_num; ++j)
+            {
+                log_debug("%f", coef[i * target_num + j]);
+            }
+        }
+
+        /* 在测试集上计算 MSE 损失 */
+        mse = 0.0f;
+        for (size_t i = 0; i < test_sample_num; ++i)
+        {
+            float32_t w = 1.0f / (float32_t)(i + 1);
+            float32_t dist;
+
+            dsp_linear_regression_predict(
+                feature_num,
+                target_num,
+                coef,
+                test_x + i * feature_num,
+                y_pred
+            );
+
+            dist = arm_euclidean_distance_f32(
+                test_y + i * target_num,
+                y_pred,
+                target_num
+            );
+            mse = (1.0f - w) * mse + w / (float32_t)target_num * dist * dist;
+        }
+
+        log_info("done, test MSE = %f", mse);
+    }
+
+    else
+    {
+        log_error("cannot solve linear regression, code = %d", ret);
+    }
+
+#ifndef __GNUC__
+    free(xwx);
+    free(xwy);
+    free(coef);
+    free(y_pred);
+#endif  /* __GNUC__ */
+    return ret;
+}
+
+int test_linear_regression(void)
+{
+    int succ = 1;
+
+    succ &= linear_regression(
+        TRAIN_SAMPLE_NUM,
+        TEST_SAMPLE_NUM,
+        FEATURE_NUM_10_5,
+        TARGET_NUM_10_5,
+        (const float32_t *)train_x_10_5,
+        (const float32_t *)train_y_10_5,
+        (const float32_t *)test_x_10_5,
+        (const float32_t *)test_y_10_5,
+        0.0f
+    );
+
+    succ &= linear_regression(
+        TRAIN_SAMPLE_NUM,
+        TEST_SAMPLE_NUM,
+        FEATURE_NUM_10_1,
+        TARGET_NUM_10_1,
+        (const float32_t *)train_x_10_1,
+        train_y_10_1,
+        (const float32_t *)test_x_10_1,
+        test_y_10_1,
+        0.0f
+    );
+
+    succ &= linear_regression(
+        TRAIN_SAMPLE_NUM,
+        TEST_SAMPLE_NUM,
+        FEATURE_NUM_1_1,
+        TARGET_NUM_1_1,
+        train_x_1_1,
+        train_y_1_1,
+        test_x_1_1,
+        test_y_1_1,
+        0.0f
+    );
+
+    return succ;
+}
+
 int test_locally_weighted_linear_regression(void)
 {
     static const float32_t weight = 0.1f;
-    float32_t ex;
-    float32_t ey;
-    float32_t ex2;
-    float32_t exy;
+
+    float32_t xwx[2][2];
+    float32_t xwy[2];
+    float32_t coef[2];
     float32_t mse;
 
     srand(time(NULL));
-    dsp_linear_regression1_init(&ex, &ey, &ex2, &exy);
+    dsp_linear_regression_uni_init((float32_t *)xwx, xwy);
     mse = 0.0f;
 
     for (size_t i = 0; i < 1000; ++i)
@@ -62,227 +235,42 @@ int test_locally_weighted_linear_regression(void)
         float32_t x = (float32_t)i * 0.01f;
         float32_t y_true = arm_sin_f32(x) + x;
         float32_t y = y_true + gaussian(0.0f, 0.1f);
-        float32_t coef;
-        float32_t bias;
         float32_t y_pred;
-        float32_t w = 1.0f / (float32_t)(i + 1);
+        float32_t mse_weight = 1.0f / (float32_t)(i + 1);
 
-        dsp_linear_regression1_add_sample(
+        dsp_linear_regression_uni_update(
             x,
             y,
             weight,
-            &ex,
-            &ey,
-            &ex2,
-            &exy
+            (float32_t *)xwx,
+            xwy
+        );
+        log_verbose(
+            "XWX = ((%f, %f), (%f, %f)), XWY = (%f, %f)",
+            xwx[0][0], xwx[0][1], xwx[1][0], xwx[1][1], xwy[0], xwy[1]
         );
 
-        dsp_linear_regression1_solve(ex, ey, ex2, exy, 0.0f, &coef, &bias);
-        dsp_linear_regression1_predict(coef, bias, x, &y_pred);
-        mse = (1.0f - w) * mse + w * square_error(y_true, y_pred);
+        dsp_linear_regression_uni_solve(
+            (float32_t *)xwx,
+            xwy,
+            0.0f,
+            coef
+        );
+        y_pred = dsp_linear_regression_uni_predict(coef, x);
+        mse = (1.0f - mse_weight) * mse + mse_weight * square_error(y_true, y_pred);
 
         log_debug(
-            "x = %f, y_true = %f, y = %f, coef = %f, bias = %f, "
+            "x = %f, y_true = %f, y = %f, coef = (%f, %f), "
             "y_pred = %f, error = %f, MSE = %f",
-            x, y_true, y, coef, bias, y_pred, square_error(y_true, y_pred), mse
+            x, y_true, y, coef[0], coef[1], y_pred, square_error(y_true, y_pred), mse
         );
-        log_verbose("Ex = %f, Ey = %f, Ex2 = %f, Exy = %f", ex, ey, ex2, exy);
+        log_verbose(
+            "XWX = ((%f, %f), (%f, %f)), XWY = (%f, %f)",
+            xwx[0][0], xwx[0][1], xwx[1][0], xwx[1][1], xwy[0], xwy[1]
+        );
     }
 
     log_info("MSE = %f", mse);
-    return 1;
-}
-
-int test_linear_regression(void)
-{
-    static float32_t xwx[FEATURE_DIM][FEATURE_DIM];
-    static float32_t ywx[TARGET_DIM][FEATURE_DIM];
-    static float32_t xwx_inv[FEATURE_DIM][FEATURE_DIM];
-    static float32_t coef[TARGET_DIM][FEATURE_DIM];
-    static float32_t ywx_vec[FEATURE_DIM];
-    static float32_t coef_vec[FEATURE_DIM];
-    static char buf[256];
-
-    float32_t pred_y[TARGET_DIM];
-    float32_t ex;
-    float32_t ey;
-    float32_t ex2;
-    float32_t exy;
-    float32_t coef1;
-    float32_t bias1;
-    float32_t pred_y1;
-    float32_t mse;
-
-    /* 特征和目标均为向量，多目标线性回归 */
-    log_info(
-        "test linear regression, feature num = %u(with dummy), target num = %u",
-        FEATURE_DIM,
-        TARGET_DIM
-    );
-
-    dsp_linear_regression_init(
-        FEATURE_DIM,
-        TARGET_DIM,
-        (float32_t *)xwx,
-        (float32_t *)ywx
-    );
-
-    for (size_t i = 0; i < TRAIN_SAMPLE_NUM; ++i)
-    {
-        dsp_linear_regression_add_sample(
-            FEATURE_DIM,
-            TARGET_DIM,
-            train_x[i],
-            train_y[i],
-            1.0f / (float32_t)(i + 1),
-            (float32_t *)xwx,
-            (float32_t *)ywx
-        );
-    }
-
-    dsp_linear_regression_solve(
-        FEATURE_DIM,
-        TARGET_DIM,
-        (float32_t *)xwx,
-        (float32_t *)ywx,
-        0.0f,
-        NULL,
-        (float32_t *)xwx_inv,
-        (float32_t *)coef
-    );
-
-    log_debug("solve linear regression, coef =");
-    for (size_t i = 0; i < TARGET_DIM; ++i)
-    {
-        for (size_t j = 0, n = 0; j < FEATURE_DIM; ++j)
-        {
-            n += snprintf(buf + n, sizeof(buf) - n, "%f, ", coef[i][j]);
-        }
-        log_debug(buf);
-    }
-
-    /* 在测试集上计算 MSE 损失 */
-    mse = 0.0f;
-    for (size_t i = 0; i < TEST_SAMPLE_NUM; ++i)
-    {
-        float32_t w = 1.0f / (float32_t)(i + 1);
-        float32_t dist;
-
-        dsp_linear_regression_predict(
-            FEATURE_DIM,
-            TARGET_DIM,
-            (float32_t *)coef,
-            test_x[i],
-            pred_y
-        );
-
-        dist = arm_euclidean_distance_f32(
-            (float32_t *)test_y[i],
-            pred_y,
-            TARGET_DIM
-        );
-        mse = (1.0f - w) * mse + w / (float32_t)TARGET_DIM * dist * dist;
-    }
-
-    log_info("done, test MSE = %f", mse);
-
-    /* 特征为向量，目标为标量，普通线性回归 */
-    log_info(
-        "test linear regression, feature num = %u(with dummy), target num = 1",
-        FEATURE_DIM,
-        TARGET_DIM
-    );
-
-    dsp_linear_regression_init(
-        FEATURE_DIM,
-        1,
-        (float32_t *)xwx,
-        ywx_vec
-    );
-
-    for (size_t i = 0; i < TRAIN_SAMPLE_NUM; ++i)
-    {
-        dsp_linear_regression_add_sample(
-            FEATURE_DIM,
-            1,
-            train_x[i],
-            &train_y_vec[i],
-            1.0f / (float32_t)(i + 1),
-            (float32_t *)xwx,
-            ywx_vec
-        );
-    }
-
-    dsp_linear_regression_solve(
-        FEATURE_DIM,
-        1,
-        (float32_t *)xwx,
-        ywx_vec,
-        0.0f,
-        NULL,
-        (float32_t *)xwx_inv,
-        coef_vec
-    );
-
-    for (size_t i = 0, n = 0; i < FEATURE_DIM; ++i)
-    {
-        n += snprintf(buf + n, sizeof(buf) - n, "%f, ", coef_vec[i]);
-    }
-    log_debug("solve linear regression, coef = %s", buf);
-
-    mse = 0.0f;
-    for (size_t i = 0; i < TEST_SAMPLE_NUM; ++i)
-    {
-        float32_t w = 1.0f / (float32_t)(i + 1);
-
-        dsp_linear_regression_predict(
-            FEATURE_DIM,
-            1,
-            coef_vec,
-            test_x[i],
-            &pred_y1
-        );
-
-        mse = (1.0f - w) * mse + w * square_error(test_y_vec[i], pred_y1);
-    }
-
-    log_info("done, test MSE = %f", mse);
-
-    /* 特征和目标均为标量，一元线性回归 */
-    log_info("test linear regression, feature num = 1(without dummy), target num = 1");
-
-    dsp_linear_regression1_init(&ex, &ey, &ex2, &exy);
-
-    for (size_t i = 0; i < TRAIN_SAMPLE_NUM; ++i)
-    {
-        dsp_linear_regression1_add_sample(
-            train_x1[i],
-            train_y1[i],
-            1.0f / (float32_t)(i + 1),
-            &ex,
-            &ey,
-            &ex2,
-            &exy
-        );
-    }
-
-    dsp_linear_regression1_solve(ex, ey, ex2, exy, 0.0f, &coef1, &bias1);
-    log_debug(
-        "solve univariate linear regression, coef = %f, bias = %f",
-        coef1,
-        bias1
-    );
-
-    mse = 0.0f;
-    for (size_t i = 0; i < TEST_SAMPLE_NUM; ++i)
-    {
-        float32_t w = 1.0f / (float32_t)(i + 1);
-
-        dsp_linear_regression1_predict(coef1, bias1, test_x1[i], &pred_y1);
-        mse = (1.0f - w) * mse + w * square_error(test_y_vec[i], pred_y1);
-    }
-
-    log_info("done, test MSE = %f", mse);
     return 1;
 }
 
