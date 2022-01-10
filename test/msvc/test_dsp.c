@@ -53,19 +53,21 @@ static int linear_regression(
     const float32_t *train_y,
     const float32_t *test_x,
     const float32_t *test_y,
-    float32_t l2
+    float32_t scale
 )
 {
     size_t dim = feature_num + 1;
 #ifdef __GNUC__
-    float32_t xwx[dim * dim];
-    float32_t xwy[dim* target_num];
-    float32_t coef[dim];
+    float32_t pre[dim * dim];
+    float32_t pre_mean[dim * target_num];
+    float32_t mean[dim];
+    float32_t cov[dim * dim];
     float32_t y_pred[target_num];
 #else
-    float32_t *xwx = (float32_t *)malloc(sizeof(float32_t) * dim * dim);
-    float32_t *xwy = (float32_t *)malloc(sizeof(float32_t) * dim * target_num);
-    float32_t *coef = (float32_t *)malloc(sizeof(float32_t) * dim);
+    float32_t *pre = (float32_t *)malloc(sizeof(float32_t) * dim * dim);
+    float32_t *pre_mean = (float32_t *)malloc(sizeof(float32_t) * dim * target_num);
+    float32_t *mean = (float32_t *)malloc(sizeof(float32_t) * dim);
+    float32_t *cov = (float32_t *)malloc(sizeof(float32_t) * dim * dim);
     float32_t *y_pred = (float32_t *)malloc(sizeof(float32_t) * target_num);
 #endif  /* __GNUC__ */
     int ret;
@@ -77,7 +79,31 @@ static int linear_regression(
         target_num
     );
 
-    dsp_linear_regression_init(feature_num, target_num, xwx, xwy);
+    dsp_linear_regression_init_scale(
+        feature_num,
+        target_num,
+        pre,
+        pre_mean,
+        NULL,
+        scale
+    );
+
+    log_verbose("prior precision matrix =");
+    for (size_t i = 0; i < dim; ++i)
+    {
+        for (size_t j = 0; j < dim; ++j)
+        {
+            log_verbose("%f", pre[i * dim + j]);
+        }
+    }
+    log_verbose("prior precision * mean =");
+    for (size_t i = 0; i < dim; ++i)
+    {
+        for (size_t j = 0; j < target_num; ++j)
+        {
+            log_verbose("%f", pre_mean[i * target_num + j]);
+        }
+    }
 
     for (size_t i = 0; i < train_sample_num; ++i)
     {
@@ -86,9 +112,10 @@ static int linear_regression(
             target_num,
             train_x + i * feature_num,
             train_y + i * target_num,
-            1.0f / (float32_t)(i + 1),
-            xwx,
-            xwy
+            1.0f,
+            1.0f,
+            pre,
+            pre_mean
         );
 
         log_verbose("x =");
@@ -101,36 +128,60 @@ static int linear_regression(
         {
             log_verbose("%f", train_y[i * target_num + j]);
         }
+        log_verbose("precision matrix =");
+        for (size_t i = 0; i < dim; ++i)
+        {
+            for (size_t j = 0; j < dim; ++j)
+            {
+                log_verbose("%f", pre[i * dim + j]);
+            }
+        }
+        log_verbose("precision * mean =");
+        for (size_t i = 0; i < dim; ++i)
+        {
+            for (size_t j = 0; j < target_num; ++j)
+            {
+                log_verbose("%f", pre_mean[i * target_num + j]);
+            }
+        }
     }
 
-    log_debug("XWX =");
+    log_debug("precision matrix =");
     for (size_t i = 0; i < dim * dim; ++i)
     {
-        log_debug("%f", xwx[i]);
+        log_debug("%f", pre[i]);
     }
-    log_debug("XWY =");
+    log_debug("precision * mean =");
     for (size_t i = 0; i < dim * target_num; ++i)
     {
-        log_debug("%f", xwy[i]);
+        log_debug("%f", pre_mean[i]);
     }
 
     ret = dsp_linear_regression_solve(
         feature_num,
         target_num,
-        xwx,
-        xwy,
-        l2,
-        coef
+        pre,
+        pre_mean,
+        mean,
+        cov
     );
 
     if (ret)
     {
-        log_debug("solve linear regression, coef =");
+        log_debug("solve linear regression, mean =");
         for (size_t i = 0; i < dim; ++i)
         {
             for (size_t j = 0; j < target_num; ++j)
             {
-                log_debug("%f", coef[i * target_num + j]);
+                log_debug("%f", mean[i * target_num + j]);
+            }
+        }
+        log_debug("covariance matrix = ");
+        for (size_t i = 0; i < dim; ++i)
+        {
+            for (size_t j = 0; j < dim; ++j)
+            {
+                log_debug("%f", cov[i * dim + j]);
             }
         }
 
@@ -144,7 +195,7 @@ static int linear_regression(
             dsp_linear_regression_predict(
                 feature_num,
                 target_num,
-                coef,
+                mean,
                 test_x + i * feature_num,
                 y_pred
             );
@@ -166,9 +217,10 @@ static int linear_regression(
     }
 
 #ifndef __GNUC__
-    free(xwx);
-    free(xwy);
-    free(coef);
+    free(pre);
+    free(pre_mean);
+    free(mean);
+    free(cov);
     free(y_pred);
 #endif  /* __GNUC__ */
     return ret;
@@ -181,12 +233,12 @@ int test_linear_regression(void)
     succ &= linear_regression(
         TRAIN_SAMPLE_NUM,
         TEST_SAMPLE_NUM,
-        FEATURE_NUM_10_5,
-        TARGET_NUM_10_5,
-        (const float32_t *)train_x_10_5,
-        (const float32_t *)train_y_10_5,
-        (const float32_t *)test_x_10_5,
-        (const float32_t *)test_y_10_5,
+        FEATURE_NUM_1_1,
+        TARGET_NUM_1_1,
+        train_x_1_1,
+        train_y_1_1,
+        test_x_1_1,
+        test_y_1_1,
         0.0f
     );
 
@@ -205,12 +257,12 @@ int test_linear_regression(void)
     succ &= linear_regression(
         TRAIN_SAMPLE_NUM,
         TEST_SAMPLE_NUM,
-        FEATURE_NUM_1_1,
-        TARGET_NUM_1_1,
-        train_x_1_1,
-        train_y_1_1,
-        test_x_1_1,
-        test_y_1_1,
+        FEATURE_NUM_10_5,
+        TARGET_NUM_10_5,
+        (const float32_t *)train_x_10_5,
+        (const float32_t *)train_y_10_5,
+        (const float32_t *)test_x_10_5,
+        (const float32_t *)test_y_10_5,
         0.0f
     );
 
@@ -219,15 +271,14 @@ int test_linear_regression(void)
 
 int test_locally_weighted_linear_regression(void)
 {
-    static const float32_t weight = 0.1f;
-
-    float32_t xwx[2][2];
-    float32_t xwy[2];
-    float32_t coef[2];
+    float32_t pre[2][2];
+    float32_t pre_mean[2];
+    float32_t mean[2];
+    float32_t cov[2][2];
     float32_t mse;
 
     srand(time(NULL));
-    dsp_linear_regression_uni_init((float32_t *)xwx, xwy);
+    dsp_linear_regression_uni_init((float32_t *)pre, pre_mean);
     mse = 0.0f;
 
     for (size_t i = 0; i < 1000; ++i)
@@ -241,32 +292,33 @@ int test_locally_weighted_linear_regression(void)
         dsp_linear_regression_uni_update(
             x,
             y,
-            weight,
-            (float32_t *)xwx,
-            xwy
+            0.9f,
+            1.0f,
+            (float32_t *)pre,
+            pre_mean
         );
         log_verbose(
-            "XWX = ((%f, %f), (%f, %f)), XWY = (%f, %f)",
-            xwx[0][0], xwx[0][1], xwx[1][0], xwx[1][1], xwy[0], xwy[1]
+            "precision matrix = ((%f, %f), (%f, %f)), precision * mean = (%f, %f)",
+            pre[0][0], pre[0][1], pre[1][0], pre[1][1], pre_mean[0], pre_mean[1]
         );
 
         dsp_linear_regression_uni_solve(
-            (float32_t *)xwx,
-            xwy,
-            0.0f,
-            coef
+            (float32_t *)pre,
+            pre_mean,
+            mean,
+            (float32_t *)cov
         );
-        y_pred = dsp_linear_regression_uni_predict(coef, x);
+        y_pred = dsp_linear_regression_uni_predict(mean, x);
         mse = (1.0f - mse_weight) * mse + mse_weight * square_error(y_true, y_pred);
 
         log_debug(
-            "x = %f, y_true = %f, y = %f, coef = (%f, %f), "
+            "x = %f, y_true = %f, y = %f, mean = (%f, %f), "
             "y_pred = %f, error = %f, MSE = %f",
-            x, y_true, y, coef[0], coef[1], y_pred, square_error(y_true, y_pred), mse
+            x, y_true, y, mean[0], mean[1], y_pred, square_error(y_true, y_pred), mse
         );
         log_verbose(
-            "XWX = ((%f, %f), (%f, %f)), XWY = (%f, %f)",
-            xwx[0][0], xwx[0][1], xwx[1][0], xwx[1][1], xwy[0], xwy[1]
+            "precision matrix = ((%f, %f), (%f, %f)), precision * mean = (%f, %f)",
+            pre[0][0], pre[0][1], pre[1][0], pre[1][1], pre_mean[0], pre_mean[1]
         );
     }
 
