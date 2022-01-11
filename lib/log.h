@@ -60,6 +60,21 @@ typedef enum
 #endif  /* LOG_BUFFER_LEN */
 
 /**
+ * 日志缓冲区.
+ */
+extern char g_log_buffer[LOG_BUFFER_LEN];
+extern char *g_log_buffer_ptr;
+
+extern int log_header(
+    LogLevel level,
+    unsigned timestamp,
+    int src,
+    const char *file,
+    const char *func,
+    int line
+);
+
+/**
  * 实际输出一条日志字符串到设备，实际输出日志时应重新实现此函数.
  */
 extern size_t _log_write(const void *buf, size_t len);
@@ -69,87 +84,57 @@ extern size_t _log_write(const void *buf, size_t len);
  */
 extern void _log_abort(void);
 
-/**
- * 输出一条日志，日志实际输出的设备需要配置.
- */
-static inline int _log_log(
-    LogLevel level,
-    const char *flag,
-    unsigned timestamp,
-    int src,
-    const char *file,
-    const char *func,
-    int line,
-    const char *msg, ...
-)
-{
-    static char buf[LOG_BUFFER_LEN];
-    size_t len = 0;
-    int n = 0;
 
-    /* 输出预定义的头部和时间 */
-    n = snprintf(buf, sizeof(buf), "[%s] %u ", flag, timestamp);
-    if (n < 0)
-    {
-        return n;
-    }
-    len = (size_t)n;
-    if (len >= sizeof(buf))
-    {
-        return (int)_log_write(buf, len);
-    }
+#define log_begin(level) do { \
+    if ((level) >= LOG_LEVEL) \
+    { \
+        log_header((level), _log_get_timestamp(), LOG_SOURCE, __FILE__, __func__, __LINE__); \
+    } \
+} while (0)
 
-    if (src)
-    {
-        /* 输出源代码信息便于调试 */
-        n = snprintf(buf + len, sizeof(buf) - len, "%s:%s:%d: ", file, func, line);
-        if (n < 0)
-        {
-            return n;
-        }
-        len += n;
-        if (len >= sizeof(buf))
-        {
-            return (int)_log_write(buf, len);
-        }
-    }
+#define log_write(level, ...) do { \
+    if ((level) >= LOG_LEVEL) \
+    { \
+        int n = snprintf( \
+            g_log_buffer_ptr, \
+            g_log_buffer + sizeof(g_log_buffer) - g_log_buffer_ptr, \
+            __VA_ARGS__ \
+        ); \
+        if (n > 0) \
+        { \
+            g_log_buffer_ptr += n; \
+        } \
+    } \
+} while (0)
 
-    va_list args;
-    va_start(args, msg);
-    n = vsnprintf(buf + len, sizeof(buf) - len, msg, args);
-    va_end(args);
-
-    if (n < 0)
-    {
-        return n;
-    }
-    len += n;
-    if (len < sizeof(buf))
-    {
-        buf[len] = '\n';
-        ++len;
-    }
-
-    return (int)_log_write(buf, len);
-}
+#define log_end(level) do { \
+    if ((level) >= LOG_LEVEL) \
+    { \
+        if (g_log_buffer_ptr < g_log_buffer + sizeof(g_log_buffer)) \
+        { \
+            *g_log_buffer_ptr++ = '\n'; \
+        } \
+        _log_write(g_log_buffer, g_log_buffer_ptr - g_log_buffer); \
+    } \
+} while (0)
 
 /**
  * 输出日志的基本接口.
  */
-#define log_log(level, flag, src, ...) \
-do { if ((level) >= LOG_LEVEL) \
-    _log_log((level), (flag), _log_get_timestamp(), (src), \
-    __FILE__, __func__, __LINE__, __VA_ARGS__); \
+#define log_log(level, ...) do { \
+    log_begin((level)); \
+    log_write((level), __VA_ARGS__); \
+    log_end((level)); \
 } while (0)
 
 /*
  * 一些简便日志接口
  */
-#define log_verbose(...)    log_log(LOG_VERBOSE, "V", (LOG_SOURCE), __VA_ARGS__)
-#define log_debug(...)      log_log(LOG_DEBUG, "D", (LOG_SOURCE),  __VA_ARGS__)
-#define log_info(...)       log_log(LOG_INFO, "I", (LOG_SOURCE),  __VA_ARGS__)
-#define log_warn(...)       log_log(LOG_WARN, "W", (LOG_SOURCE),  __VA_ARGS__)
-#define log_error(...)      log_log(LOG_ERROR, "E", (LOG_SOURCE),  __VA_ARGS__)
+#define log_verbose(...)    log_log(LOG_VERBOSE, __VA_ARGS__)
+#define log_debug(...)      log_log(LOG_DEBUG, __VA_ARGS__)
+#define log_info(...)       log_log(LOG_INFO, __VA_ARGS__)
+#define log_warn(...)       log_log(LOG_WARN, __VA_ARGS__)
+#define log_error(...)      log_log(LOG_ERROR, __VA_ARGS__)
 
 #ifdef NDEBUG
 #define log_assert(con)
@@ -161,7 +146,21 @@ do { if ((level) >= LOG_LEVEL) \
 do { \
     if (!(con)) \
     { \
-        log_log(LOG_ERROR, "E", 1, "assertion failed: " #con); \
+        int n; \
+        log_header(LOG_ERROR, _log_get_timestamp(), 1, __FILE__, __func__, __LINE__); \
+        if ((n = snprintf( \
+            g_log_buffer_ptr, \
+            g_log_buffer + sizeof(g_log_buffer) - g_log_buffer_ptr, \
+            #con \
+        )) > 0) \
+        { \
+            g_log_buffer_ptr += n; \
+        } \
+        if (g_log_buffer_ptr < g_log_buffer + sizeof(g_log_buffer)) \
+        { \
+            *g_log_buffer_ptr++ = '\n'; \
+        } \
+        _log_write(g_log_buffer, g_log_buffer_ptr - g_log_buffer); \
         _log_abort(); \
     } \
 } while (0)
