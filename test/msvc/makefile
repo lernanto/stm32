@@ -4,7 +4,8 @@ LINK = link
 CMSIS_ROOT = D:\git\CMSIS_5\CMSIS
 LIB_ROOT = ..\..\lib
 INC = /I . /I $(LIB_ROOT) /I $(CMSIS_ROOT)\DSP\Include /I $(CMSIS_ROOT)\DSP\PrivateInclude
-CFLAGS = $(INC)
+CFLAGS = $(INC) /Zi
+LINKFLAGS = /DEBUG
 
 all: test_dsp.exe
 
@@ -52,4 +53,4 @@ test_dsp.exe: \
 	MatrixFunctions.obj \
 	StatisticsFunctions.obj \
 	SupportFunctions.obj
-	$(LINK) -out:test_dsp.exe $**
+	$(LINK) $(LINKFLAGS) -out:test_dsp.exe $**

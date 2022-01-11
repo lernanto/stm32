@@ -44,6 +44,41 @@ static inline float32_t square_error(float32_t y_true, float32_t y_pred)
     return err * err * 0.5f;
 }
 
+static inline void log_matrix(
+    LogLevel level,
+    const char *header,
+    size_t row,
+    size_t col,
+    const float32_t *matrix
+)
+{
+    if ((1 == row) || (1 == col))
+    {
+        size_t n = (1 == row) ? col : row;
+
+        log_begin(level);
+        log_write(level, header);
+        for (size_t i = 0; i < n; ++i)
+        {
+            log_write(level, "%f ", matrix[i]);
+        }
+        log_end(level);
+    }
+    else
+    {
+        log_log(level, header);
+        for (size_t i = 0; i < row * col; i += col)
+        {
+            log_begin(level);
+            for (size_t j = i; j < i + col; ++j)
+            {
+                log_write(level, "%f ", matrix[j]);
+            }
+            log_end(level);
+        }
+    }
+}
+
 static int linear_regression(
     size_t train_sample_num,
     size_t test_sample_num,
@@ -74,7 +109,7 @@ static int linear_regression(
     float32_t mse;
 
     log_info(
-        "linear regression, feature num = %u, target num = %u",
+        "linear regression, feature num = %zu, target num = %zu",
         feature_num,
         target_num
     );
@@ -88,22 +123,20 @@ static int linear_regression(
         scale
     );
 
-    log_verbose("prior precision matrix =");
-    for (size_t i = 0; i < dim; ++i)
-    {
-        for (size_t j = 0; j < dim; ++j)
-        {
-            log_verbose("%f", pre[i * dim + j]);
-        }
-    }
-    log_verbose("prior precision * mean =");
-    for (size_t i = 0; i < dim; ++i)
-    {
-        for (size_t j = 0; j < target_num; ++j)
-        {
-            log_verbose("%f", pre_mean[i * target_num + j]);
-        }
-    }
+    log_matrix(
+        LOG_VERBOSE,
+        "prior precision matrix = ",
+        dim,
+        dim,
+        pre
+    );
+    log_matrix(
+        LOG_VERBOSE,
+        "prior precision * mean = ",
+        dim,
+        target_num,
+        pre_mean
+    );
 
     for (size_t i = 0; i < train_sample_num; ++i)
     {
@@ -118,43 +151,10 @@ static int linear_regression(
             pre_mean
         );
 
-        log_verbose("x =");
-        for (size_t j = 0; j < feature_num; ++j)
-        {
-            log_verbose("%f", train_x[i * feature_num + j]);
-        }
-        log_verbose("y =");
-        for (size_t j = 0; j < target_num; ++j)
-        {
-            log_verbose("%f", train_y[i * target_num + j]);
-        }
-        log_verbose("precision matrix =");
-        for (size_t i = 0; i < dim; ++i)
-        {
-            for (size_t j = 0; j < dim; ++j)
-            {
-                log_verbose("%f", pre[i * dim + j]);
-            }
-        }
-        log_verbose("precision * mean =");
-        for (size_t i = 0; i < dim; ++i)
-        {
-            for (size_t j = 0; j < target_num; ++j)
-            {
-                log_verbose("%f", pre_mean[i * target_num + j]);
-            }
-        }
-    }
-
-    log_debug("precision matrix =");
-    for (size_t i = 0; i < dim * dim; ++i)
-    {
-        log_debug("%f", pre[i]);
-    }
-    log_debug("precision * mean =");
-    for (size_t i = 0; i < dim * target_num; ++i)
-    {
-        log_debug("%f", pre_mean[i]);
+        log_matrix(LOG_VERBOSE, "x = ", 1, feature_num, train_x + i * feature_num);
+        log_matrix(LOG_VERBOSE, "y = ", 1, target_num, train_y + i * target_num);
+        log_matrix(LOG_VERBOSE, "precision matrix = ", dim, dim, pre);
+        log_matrix(LOG_VERBOSE, "precision * mean = ", dim, target_num, pre_mean);
     }
 
     ret = dsp_linear_regression_solve(
@@ -168,22 +168,16 @@ static int linear_regression(
 
     if (ret)
     {
-        log_debug("solve linear regression, mean =");
-        for (size_t i = 0; i < dim; ++i)
-        {
-            for (size_t j = 0; j < target_num; ++j)
-            {
-                log_debug("%f", mean[i * target_num + j]);
-            }
-        }
-        log_debug("covariance matrix = ");
-        for (size_t i = 0; i < dim; ++i)
-        {
-            for (size_t j = 0; j < dim; ++j)
-            {
-                log_debug("%f", cov[i * dim + j]);
-            }
-        }
+        log_matrix(LOG_DEBUG, "precison matrix = ", dim, dim, pre);
+        log_matrix(LOG_DEBUG, "precision * mean = ", dim, target_num, pre_mean);
+        log_matrix(
+            LOG_DEBUG,
+            "solve linear regression, mean = ",
+            dim,
+            target_num,
+            mean
+        );
+        log_matrix(LOG_DEBUG, "covariance matrix = ", dim, dim, cov);
 
         /* 在测试集上计算 MSE 损失 */
         mse = 0.0f;
@@ -297,10 +291,6 @@ int test_locally_weighted_linear_regression(void)
             (float32_t *)pre,
             pre_mean
         );
-        log_verbose(
-            "precision matrix = ((%f, %f), (%f, %f)), precision * mean = (%f, %f)",
-            pre[0][0], pre[0][1], pre[1][0], pre[1][1], pre_mean[0], pre_mean[1]
-        );
 
         dsp_linear_regression_uni_solve(
             (float32_t *)pre,
@@ -308,17 +298,18 @@ int test_locally_weighted_linear_regression(void)
             mean,
             (float32_t *)cov
         );
+
+        log_matrix(LOG_VERBOSE, "precision matrix = ", 2, 2, (const float32_t *)pre);
+        log_matrix(LOG_VERBOSE, "precision * mean = ", 1, 2, pre_mean);
+        log_matrix(LOG_DEBUG, "mean = ", 1, 2, mean);
+        log_matrix(LOG_DEBUG, "covariance matrix = ", 2, 2, (const float32_t *)cov);
+
         y_pred = dsp_linear_regression_uni_predict(mean, x);
         mse = (1.0f - mse_weight) * mse + mse_weight * square_error(y_true, y_pred);
 
         log_debug(
-            "x = %f, y_true = %f, y = %f, mean = (%f, %f), "
-            "y_pred = %f, error = %f, MSE = %f",
-            x, y_true, y, mean[0], mean[1], y_pred, square_error(y_true, y_pred), mse
-        );
-        log_verbose(
-            "precision matrix = ((%f, %f), (%f, %f)), precision * mean = (%f, %f)",
-            pre[0][0], pre[0][1], pre[1][0], pre[1][1], pre_mean[0], pre_mean[1]
+            "x = %f, y_true = %f, y = %f, y_pred = %f, error = %f, MSE = %f",
+            x, y_true, y, y_pred, square_error(y_true, y_pred), mse
         );
     }
 
