@@ -129,14 +129,19 @@ extern void dsp_linear_regression_uni_update(
 );
 
 extern int dsp_linear_regression_uni_solve(
-    const float32_t precision[4],
+    float32_t precision[4],
     const float32_t pre_mean[2],
     float32_t mean[2],
     float32_t cov[4]
 );
 
 extern float32_t dsp_linear_regression_uni_predict(
-    const float32_t *mean,
+    const float32_t mean[2],
+    float32_t x
+);
+
+extern float32_t dsp_linear_regression_uni_predict_prec(
+    const float32_t precision[4],
     float32_t x
 );
 
@@ -161,7 +166,7 @@ extern void dsp_linear_regression_mul_update(
 
 extern int dsp_linear_regression_mul_solve(
     size_t feature_num,
-    const float32_t *precision,
+    float32_t *precision,
     const float32_t *pre_mean,
     float32_t *mean,
     float32_t *cov
@@ -170,6 +175,12 @@ extern int dsp_linear_regression_mul_solve(
 extern float32_t dsp_linear_regression_mul_predict(
     size_t feature_num,
     const float32_t *mean,
+    const float32_t *x
+);
+
+extern float32_t dsp_linear_regression_mul_predict_prec(
+    size_t feature_num,
+    const float32_t *precision,
     const float32_t *x
 );
 
@@ -197,7 +208,7 @@ extern void dsp_linear_regression_mt_update(
 extern int dsp_linear_regression_mt_solve(
     size_t feature_num,
     size_t target_num,
-    const float32_t *precision,
+    float32_t *precision,
     const float32_t *pre_mean,
     float32_t *mean,
     float32_t *cov
@@ -286,7 +297,7 @@ static inline int dsp_linear_regression_update(
 static inline int dsp_linear_regression_solve(
     size_t feature_num,
     size_t target_num,
-    const float32_t *precision,
+    float32_t *precision,
     const float32_t *pre_mean,
     float32_t *mean,
     float32_t *cov
@@ -357,6 +368,30 @@ static inline int dsp_linear_regression_predict(
     }
 
     return 1;
+}
+
+/**
+ * @brief 使用解得的线性回归模型预测目标的精度
+ *
+ * @param feature_num 样本特征向量维数
+ * @param precision 线性回归模型的精度矩阵
+ * @param x 输入特征向量
+ * @return 预测目标的精度
+ */
+static inline float32_t dsp_linear_regression_predict_prec(
+    size_t feature_num,
+    const float32_t *precision,
+    const float32_t *x
+)
+{
+    if (1 == feature_num)
+    {
+        return dsp_linear_regression_uni_predict_prec(precision, *x);
+    }
+    else
+    {
+        return dsp_linear_regression_mul_predict_prec(feature_num, precision, x);
+    }
 }
 
 /**

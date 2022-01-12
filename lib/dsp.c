@@ -203,7 +203,7 @@ static void update_pre_mean_mt(
 
 static arm_status compute_cov(
     size_t dim,
-    const float32_t *precision,
+    float32_t *precision,
     arm_matrix_instance_f32 *cov
 )
 {
@@ -215,19 +215,18 @@ static arm_status compute_cov(
     float32_t *a = (float32_t *)malloc(sizeof(float32_t) * dim * dim);
 #endif  /* __GNUC__ */
 
-    arm_mat_init_f32(&a_mat, dim, dim, a);
-    arm_copy_f32(precision, a, dim * dim);
-
     /* 精度矩阵只计算了下三角的一半，先复制补全对称的另一半 */
     for (size_t i = 0; i < dim; ++i)
     {
         for (size_t j = 0; j < i; ++j)
         {
-            a[j * dim + i] = a[i * dim + j];
+            precision[j * dim + i] = precision[i * dim + j];
         }
     }
 
     /* 求协方差矩阵，为精度矩阵的逆 */
+    arm_mat_init_f32(&a_mat, dim, dim, a);
+    arm_copy_f32(precision, a, dim * dim);
     status = arm_mat_inverse_f32(&a_mat, cov);
 #ifndef __GNUC__
     free(a);
@@ -255,19 +254,21 @@ void dsp_linear_regression_uni_update(
 }
 
 int dsp_linear_regression_uni_solve(
-    const float32_t precision[4],
+    float32_t precision[4],
     const float32_t pre_mean[2],
     float32_t mean[2],
     float32_t cov[4]
 )
 {
+    precision[1] = precision[2];
+
     /* 直接计算二元一次非齐次方程组 */
-    float32_t det = precision[0] * precision[3] - precision[2] * precision[2];
+    float32_t det = precision[0] * precision[3] - precision[1] * precision[2];
 
     if (det != 0.0f)
     {
         cov[0] = precision[3] / det;
-        cov[1] = cov[2] = -precision[2] / det;
+        cov[1] = cov[2] = -precision[1] / det;
         cov[3] = precision[0] / det;
 
         mean[0] = cov[0] * pre_mean[0] + cov[1] * pre_mean[1];
@@ -282,11 +283,21 @@ int dsp_linear_regression_uni_solve(
 }
 
 float32_t dsp_linear_regression_uni_predict(
-    const float32_t *mean,
+    const float32_t mean[2],
     float32_t x
 )
 {
     return mean[0] * x + mean[1];
+}
+
+float32_t dsp_linear_regression_uni_predict_prec(
+    const float32_t precision[4],
+    float32_t x
+)
+{
+    float32_t x2 = x * x + 1.0f;
+    return (precision[0] * x * x + precision[1] * x + precision[2] * x + precision[3])
+        / x2 / x2;
 }
 
 void dsp_linear_regression_mul_update(
@@ -308,7 +319,7 @@ void dsp_linear_regression_mul_update(
  */
 int dsp_linear_regression_mul_solve(
     size_t feature_num,
-    const float32_t *precision,
+    float32_t *precision,
     const float32_t *pre_mean,
     float32_t *mean,
     float32_t *cov
@@ -344,6 +355,41 @@ float32_t dsp_linear_regression_mul_predict(
     return y;
 }
 
+float32_t dsp_linear_regression_mul_predict_prec(
+    size_t feature_num,
+    const float32_t *precision,
+    const float32_t *x
+)
+{
+    size_t dim = feature_num + 1;
+    arm_matrix_instance_f32 prec_mat;
+    float32_t x2;
+    float32_t prec;
+#ifdef __GNUC__
+    float32_t x_ext[dim * dim];
+    float32_t prec_x[dim * dim];
+#else
+    float32_t *x_ext = (float32_t *)malloc(sizeof(float32_t) * dim);
+    float32_t *prec_x = (float32_t *)malloc(sizeof(float32_t) * dim);
+#endif  /* __GNUC__ */
+
+    arm_copy_f32(x, x_ext, feature_num);
+    x_ext[feature_num] = 1.0f;
+
+    arm_dot_prod_f32(x_ext, x_ext, dim, &x2);
+    arm_scale_f32(x_ext, 1.0f / x2, x_ext, dim);
+
+    arm_mat_init_f32(&prec_mat, dim, dim, (float32_t *)precision);
+    arm_mat_vec_mult_f32(&prec_mat, x_ext, prec_x);
+    arm_dot_prod_f32(x_ext, prec_x, dim, &prec);
+
+#ifndef __GNUC__
+    free(x_ext);
+    free(prec_x);
+#endif  /* __GNUC__ */
+    return prec;
+}
+
 void dsp_linear_regression_mt_update(
     size_t feature_num,
     size_t target_num,
@@ -362,7 +408,7 @@ void dsp_linear_regression_mt_update(
 int dsp_linear_regression_mt_solve(
     size_t feature_num,
     size_t target_num,
-    const float32_t *precision,
+    float32_t *precision,
     const float32_t *pre_mean,
     float32_t *mean,
     float32_t *cov
