@@ -36,6 +36,11 @@
 			<locationURI>PARENT-1-PROJECT_LOC/lib/dsp.c</locationURI>
 		</link>
 		<link>
+			<name>Core/Src/log.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/lib/log.c</locationURI>
+		</link>
+		<link>
 			<name>Core/Src/test_dsp.c</name>
 			<type>1</type>
 			<locationURI>PROJECT_LOC/msvc/test_dsp.c</locationURI>
