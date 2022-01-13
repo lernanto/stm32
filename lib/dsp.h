@@ -3,14 +3,14 @@
  * @author 黄艺华 (lernanto@foxmail.com)
  *
  * 当前只包含增量线性回归功能
- * 增量是指每次读入一条样本，读入任意数量的样本后，都可以求解线性回归模型，
+ * 增量是指每次读入一条样本，在读入任意条样本之后，随时可以求解线性回归模型，
  * 解出的模型考虑了迄今为止读入的所有样本。继续读入新的样本，重复求解过程可以得到更新的模型，
  * 这个过程可以一直持续下去。这种求解过程适合样本随着时间采集，采集的同时又要即时求解的情况。
  *
- * 读入样本的时候可以为样本指定权重
- *  - 如指定权重 w = 1 / n，其中 n 为迄今为止读入的样本数量（包括当前样本），则相当于普通线性回归
- *  - 指定 w = 1 / (1 / w * d + 1)，其中 d 为 (0, 1] 的衰减系数，相当于局部加权线性回归
- *  - 指定任意 w 属于 (0, 1)，相当于普通加权线性回归，w 需要根据样本权重预先计算
+ * 读入样本的时候可以为先前样本指定衰减系数，为当前样本指定权重
+ *  - 如指定衰减系数 decay = 1，样本权重 weight = 1，则相当于普通线性回归
+ *  - 指定 decay = 1，weight != 1，相当于加权线性回归
+ *  - 指定 decay < 1，weight = 1，相当于局部加权线性回归
  */
 
 #ifndef _DSP_H
@@ -392,111 +392,6 @@ static inline float32_t dsp_linear_regression_predict_prec(
     {
         return dsp_linear_regression_mul_predict_prec(feature_num, precision, x);
     }
-}
-
-/**
- * @brief 初始化一元线性回归模型
- *
- * @param w 用来保存累加权重
- * @param ex 增量求解过程中用来保存特征的期望
- * @param ey 增量求解过程中用来保存目标的期望
- * @param ex2 增量求解过程中用来保存 x^2 的期望
- * @param exy 增量求解过程中用来保存 x * y 的期望
- * @return 成功返回非0，失败返回0
- *
- * @note 是线性回归模型在输入和输出都是一元的情况下的简便函数
- */
-extern int dsp_linear_regression1_init(
-    float32_t *w,
-    float32_t *ex,
-    float32_t *ey,
-    float32_t *ex2,
-    float32_t *exy
-);
-
-/**
- * @brief 一元线性回归模型读入一个样本
- *
- * @param x 样本特征
- * @param y 样本目标
- * @param weight 样本权重
- * @param precision XWX
- * @param pre_mean XWy
- * @return 成功返回非0，失败返回0
- */
-extern int dsp_linear_regression1_add_sample(
-    float32_t x,
-    float32_t y,
-    float32_t weight,
-    float32_t precision[2][2],
-    float32_t pre_mean[2]
-);
-
-/**
- * @brief 求解一元线性回归模型
- *
- * @param w 累加权重
- * @param ex x 的期望
- * @param ey y 的期望
- * @param ex2 x^2 的期望
- * @param exy x * y 的期望
- * @param mean 求解得到的特征系数
- * @param bias 求解得到的常数偏置
- * @return 成功返回非0，失败返回0
- */
-extern int dsp_linear_regression1_solve(
-    float32_t w,
-    float32_t ex,
-    float32_t ey,
-    float32_t ex2,
-    float32_t exy,
-    float32_t *mean,
-    float32_t *bias
-);
-
-/**
- * @brief 使用解得的一元线性回归模型预测目标
- *
- * @param mean 模型特征系数
- * @param bias 模型常数偏置
- * @param x 输入特征
- * @param y 保存预测得到的目标
- * @return 成功返回非0，失败返回0
- */
-extern int dsp_linear_regression1_predict(
-    float32_t mean,
-    float32_t bias,
-    float32_t x,
-    float32_t *y
-);
-
-/**
- * @brief 为局部加权线性回归更新样本权重的简便函数
- *
- * @return 权重倒数的初始值，和先验方差成正比
- */
-static inline float32_t dsp_linear_regression_init_weight(void)
-{
-    return 0.0f;
-}
-
-/**
- * @brief 根据衰减系数更新样本权重
- *
- * @param var 保存权重的导数，和先验方差成正比
- * @param decay 衰减系数，(0, 1]，越大表示旧样本的权重越高，特殊取值下
- *  - 当取0时，相当于只使用最新的一条样本
- *  - 当取1时，相当于新旧样本同等权重
- *  - 当取 > 1 时，相当于旧样本比新样本权重更高
- * @return 下一条样本权重
- */
-static inline float32_t dsp_linear_regression_update_weight(
-    float32_t *var,
-    float32_t decay
-)
-{
-    *var = *var * decay + 1.0f;
-    return 1.0f / *var;
 }
 
 #endif  /* _DSP_H */
